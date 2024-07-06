@@ -150,4 +150,52 @@ pic: headers
 Look also in the request header now, the content type. It tells the API how to deserialize the object.
 
 # Validate input
-When using the ApiController attribute at controller level, assp.net returns error code 400 if validation fails.
+
+When using the ApiController attribute at controller level, asp.net returns error code 400 if validation fails.
+Asp.net returns 400 if the request body is empty automatically.
+Other custom validations can be made with data annotations nd fluent validation.
+Data annotations are attributes and asp.net provides attributes for very common validations, like email, phone, number ranges, required values, etc
+The use of data annotations is ok for simple use cases.
+For big applications Fluent validation must be considered, annotations mix rules with models, so no follow good separation of concerns.
+
+# Updating a resource
+
+There are full updates or partial updates.
+Full updates are done with HTTP put and partical updates with the patch and json documents. Put means all fields of the objects will be updated, patch means we can send only the change set over the wire.
+The patch needs to contain the fields that need to be updated and its values.
+
+To check: json Patch (RFC 6902): describes a document structure for expressing a sequence of operations to apply to a json document.
+It will list all the properties that need update and the values.
+
+When doing the patch we need to pass the model state and verify manually if the model state is valid after applying the patch document.
+The document might have properties that are not in our model for example.
+
+# Logging and exception handling
+
+loggers can be injected via dependency injection. Logging providers can be configured to write logs into a file, to azure, etc. By default asp.net loggs to the console. Logging configurations are present in the appsettings.json and can be configured per environment.
+
+Usually the prefered approach is to handle exceptions in a central place.
+Asp.net core by default, in the development environment, enables the development exception page.
+the developer can see the exception and the stack trace. CAREFUL: never send the exception to the client, in other environments, it exposes implementation details.
+
+for other environments, besides the development, we can add the exception handling middleware (for that we need to add problem detials to). It makes sense to build a user friendly errors response by using the probem details object seen before. In front-end apps, it makes sense to build a nice user friendly error page.
+
+Plenty of log providers (NLog, erilog, etc)
+
+Other custom services can be added via dependency injection as well. There are several lifetimes:
+
+1. Scoped: an instance per request
+1. Transient: an new instance every time it is requested
+1. Singleton: an instance for the whole application
+
+# configuration
+
+By default, the asp.net creates the file appSettings.json. This configuration is available as key value pairs in the application, by injecting the interface IConfiguration interface where needed.
+In our case we introduced there default email settings.
+We can vary our configuration based on the environement we are running the app. By default, asp.net core creates a second app settings file called: appSettings.Development.json, for the development environment. We can add more files to staging and production environments like: appSettings.Staging.json, etc.
+The appSettings.json has the default values, that can be ovverrided in the environment specific files. So the environment specific files do not need all the configuration values in them.
+In this case we changed the email address to where we send the point of interest deleted.
+
+# security
+
+Attention in creating files on the server.
