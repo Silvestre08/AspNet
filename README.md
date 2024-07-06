@@ -23,7 +23,7 @@ The order we configure the pipeline steps matter because the request travels thr
 Each step can do something with a request, participating in forming the response.
 A brief picture on how the pipeline looks like:
 
-![](images/requestpipeline.png)
+![](Images/requestpipeline.png)
 
 We have to plug middleware for routing, that maps a URL used in the browser to a part of our application.
 The same goes for authorization. This are all static methods to add steps for the pipeline, provided by asp.net core.
@@ -64,7 +64,7 @@ The contract is shared by the client and the API.
 We only need one endpoint per service not a multitude of them like in rest.
 
 Here it is a comparision of the two:
-![](images/restVsgRPC.png)
+![](Images/restVsgRPC.png)
 
 gRPC is more suitable for APIs used whithin the same organization because all APIs need to know how the API sticks together. It is behavioral coupling and if the contract changes all clients need to be updated.
 Rest is more suitable for public APIs.
