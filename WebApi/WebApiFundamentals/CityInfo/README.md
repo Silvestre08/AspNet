@@ -199,7 +199,10 @@ In this case we changed the email address to where we send the point of interest
 
 ## Models
 
-APis usually do not return the same entities as they are in its data store.
+Models represent data and behavior. Data is stored in a database in form of tables which is not very object oriented friendly. It is then very common to use ORMa (Object-Relational Mapping) that let us manipulate data from a database using an object-oriented paradigm and fetch the data as entities, or, our models. We can work with object instead of sql statements.
+Within the .net realm, EF core is a widely used ORM that supports SQL Server, Postgres, etc.
+This is a web api trainning, so in order to dig deep into EF go here:.
+A note on returning objects: APis usually do not return the same entities as they are in its data store.
 Usually, Data Transfer Objects (DTOs), are returned.
 
 ## Security
