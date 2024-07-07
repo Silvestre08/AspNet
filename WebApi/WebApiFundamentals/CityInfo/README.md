@@ -201,10 +201,34 @@ In this case we changed the email address to where we send the point of interest
 
 Models represent data and behavior. Data is stored in a database in form of tables which is not very object oriented friendly. It is then very common to use ORMa (Object-Relational Mapping) that let us manipulate data from a database using an object-oriented paradigm and fetch the data as entities, or, our models. We can work with object instead of sql statements.
 Within the .net realm, EF core is a widely used ORM that supports SQL Server, Postgres, etc.
+
+Our entitties can use data annotation attributes to properties that can tell EF if a property is for example a key. If the property is name "Id" EF core also recognizes it as a key, due to the naming conventions in place.
+In our example we use data annotations, but fluent APIs are also possible to achieve the same results. Data annotations configure the database constraints as well: if we do not specify a max lenght of a string property,the database will use varchar max instead of limiting the column size.
+The DTOs do not have some of these annotations, because they are not needed to store the data in the database.
+
 This is a web api trainning, so in order to dig deep into EF go here:.
 A note on returning objects: APis usually do not return the same entities as they are in its data store.
 Usually, Data Transfer Objects (DTOs), are returned.
 
 ## Security
+
+On the demo of last sections, we've just seen how to configure EF core with SQL Lite. In order to connect to a database, we need a connection string. Connections strings are considered sensitive data.
+We may be tempted to store such values as configuration data in the AppSettings. That is ok for development environments, but not ok at all for production environments because connection strings have server names, combinations of user and password, etc.
+There are several safe locations: azure key vault (tto far for thos course), environment variable.
+Environment variable is a variable is a value that is set outside of the program, but on the operating system (so never on the source control system).
+Imagining our windows laptop is the production server we can setup an environment variable there. Go to windows menu -> Edit System Variables -> NewSystemVariable.
+Visual studio overrides appSettings with environment variables. So in order to keep developing we need to remove it.
+
+SQL injection is an attack in which malicious code is inserted into strings that are later passed to an instance of a database server for parsing and execution.
+
+Here is an example, where a client sends this string to filter for city name:
+![](doc/sqlinjection.png)
+
+That gets translated into two sql statements, as we can see. The script is dropping a table, meaning the app would loose data.
+Also, other statements could be executed, like query sensitive user data.
+Code that constructs SQL statements should be reviewed for injection vulnerabilities.
+The best way to protect agains SQL injection is by encapsulating and parameterizing SQL commands. This way the input text is treated as paremeter and not a SQL command:
+![](doc/sqlinjectionsolved.png)
+EF core gives almost this out of the box. Most of the queries are done as linq statements.
 
 Attention in creating files on the server.
