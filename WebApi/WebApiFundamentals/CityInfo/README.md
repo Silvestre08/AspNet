@@ -208,7 +208,10 @@ The DTOs do not have some of these annotations, because they are not needed to s
 
 This is a web api trainning, so in order to dig deep into EF go here:.
 A note on returning objects: APis usually do not return the same entities as they are in its data store.
-Usually, Data Transfer Objects (DTOs), are returned.
+Usually, Data Transfer Objects (DTOs), are returned. In this demo we introduced the AutoMapper to map entities to DTOS and the repository pattern, to abstract the DBContext and the data access completely. Here are the advantages of the repository pattern:
+![](doc/repositoryPattern.png)
+
+Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be return. Check the GetCityById with or without points of interests (dtos are different).
 
 ## Security
 
