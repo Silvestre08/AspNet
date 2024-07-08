@@ -212,6 +212,7 @@ Usually, Data Transfer Objects (DTOs), are returned. In this demo we introduced 
 ![](doc/repositoryPattern.png)
 
 Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be return. Check the GetCityById with or without points of interests (dtos are different).
+A thing to pay attention to is to retrieve child objects. If the parent does not exist, 404 should be returned. No having the parent is different than an empty list. That is why we have CityExistsAsync.
 
 ## Security
 
