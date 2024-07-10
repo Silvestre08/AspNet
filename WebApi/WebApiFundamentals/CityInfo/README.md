@@ -236,3 +236,51 @@ The best way to protect agains SQL injection is by encapsulating and parameteriz
 EF core gives almost this out of the box. Most of the queries are done as linq statements.
 
 Attention in creating files on the server.
+
+# Searching, filtering and paging
+
+Filtering a collection means limiting the collection taking into account a predicate. It is done by passing the fieald name and value via query string. The filter is applied to the fieald name passed throughÇ
+![](doc/filtering.png)
+
+In our cities controller, method get citties now accepts a string parameter called name. We are gona get from the URL. The attribute [FromQuery] is not necessary but some people do it for readbility purposes.
+Notice that the parameters are of Nullable types.
+
+Searching a collection means adding matching items to the collection based on a predefined set of rules. It is passed through a value to search for via the query string. It is up to the API to decide how to implement the search functionality:
+![](doc/searching.png)
+
+In our get cities controller we combined searching and filtering. We introduced that functionality at the repository level to avoid fetching big collection from the database. We used an IQueriable internally at the repository level, to build a query and then executing the whole query at once. The query is built as an expression tree. This is an important principle of deferred execution.Query execution occurs sometime after the query is constructed, when it is iterated over (calling ToList, etc)
+
+In real-world scenarios collections grow quite large. Paging helps avoid performance issues. Paging parameters are aslo passed via the query string:
+![](doc/paging.png)
+
+Good practices on pagins are:
+
+1. Limit page size: consumers could still pass a big number for page size and create problems. Page size should vary by collection to allow clients to customize their collections.
+1. Page by default: if the page number is not specified, send page 1
+1. Page all the way through the underlying data store.
+
+It is good practice to send pagination metadata in the response. It often includes:
+
+1. Total amount of items
+1. Total amount of pages
+1. Current page number
+1. Page size
+
+![](doc/pagination.png)
+
+# Securing APIs
+
+There are several ways of securing APIs, some at infrastructural level or application level.
+Some use both combinations. On this course, we will focus on application level.
+When an API receives a request it has to know the user/app trying to access the resource. It has been proven that sending directly the username and password over the wire was a bad idea.
+Instead of sending user and password, tokens should be sent.
+Tokens represent consent.
+We send the user name and password the first time, we get a token back and, after that, we just send the token.
+A token typically has 3 pieces:
+
+1. Payload: piece of json that contains generic infor, like, when the token was created, and some info about the user.
+1. Signature: it is a hash of the payload, used to ensure the data wasn't tampered with. If someone changes hte payload, after the signature was created, the hash will not match with whatever is on the payload. For signing something, we need a key that is generated from a secret
+1. The header: essential token information like the key algorithm used for signing.
+
+On our simple case, we are using ASP.NET classes to generate our own token. The authenticate method is recommended to be a post method.
+In our case, given that is a development machine, we stored the secrets in the appSettings.Development.json. In production they need to come from key vault
