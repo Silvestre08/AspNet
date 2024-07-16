@@ -211,12 +211,12 @@ A note on returning objects: APis usually do not return the same entities as the
 Usually, Data Transfer Objects (DTOs), are returned. In this demo we introduced the AutoMapper to map entities to DTOS and the repository pattern, to abstract the DBContext and the data access completely. Here are the advantages of the repository pattern:
 ![](doc/repositoryPattern.png)
 
-Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be return. Check the GetCityById with or without points of interests (dtos are different).
-A thing to pay attention to is to retrieve child objects. If the parent does not exist, 404 should be returned. No having the parent is different than an empty list. That is why we have CityExistsAsync.
+Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be returned. Check the *GetCityById* with or without points of interests (dtos are different).
+A thing to pay attention to is to retrieve child objects. If the parent does not exist, 404 should be returned. Not having the parent is different than an empty list. That is why we have *CityExistsAsync*.
 
 ## Security
 
-On the demo of last sections, we've just seen how to configure EF core with SQL Lite. In order to connect to a database, we need a connection string. Connections strings are considered sensitive data.
+We've just seen how to configure EF core with SQL Lite. In order to connect to a database, we need a connection string. Connections strings are considered sensitive data.
 We may be tempted to store such values as configuration data in the AppSettings. That is ok for development environments, but not ok at all for production environments because connection strings have server names, combinations of user and password, etc.
 There are several safe locations: azure key vault (tto far for thos course), environment variable.
 Environment variable is a variable is a value that is set outside of the program, but on the operating system (so never on the source control system).
@@ -278,9 +278,68 @@ Tokens represent consent.
 We send the user name and password the first time, we get a token back and, after that, we just send the token.
 A token typically has 3 pieces:
 
-1. Payload: piece of json that contains generic infor, like, when the token was created, and some info about the user.
-1. Signature: it is a hash of the payload, used to ensure the data wasn't tampered with. If someone changes hte payload, after the signature was created, the hash will not match with whatever is on the payload. For signing something, we need a key that is generated from a secret
+1. Payload: piece of json that contains generic information, like, when the token was created, and some info about the user.
+1. Signature: it is a hash of the payload, used to ensure the data wasn't tampered with. If someone changes the payload, after the signature was created, the hash will not match with whatever is on the payload. For signing something, we need a key that is generated from a secret. The server knows the key and how to decrypt the signature using the key. If the information on the payload does not match the signature it means that the information was compromised.
 1. The header: essential token information like the key algorithm used for signing.
 
+![](doc/jwt.PNG)
 On our simple case, we are using ASP.NET classes to generate our own token. The authenticate method is recommended to be a post method.
-In our case, given that is a development machine, we stored the secrets in the appSettings.Development.json. In production they need to come from key vault
+In our case, given that is a development machine, we stored the secret key in the appSettings.Development.json. In production they need to come from key vault.
+
+To require authentication on our API we did several things:
+1. On the controller, we declared the [Authorize] attribute. 
+1. In program.cs we need to configure the service collection to require authentication and specify the conditions on which the token is valid:
+![](doc/authentication.PNG)
+In this picture, we can see that the token is valid if the audience is the same as the one in our configuration etc.
+1. In the middleware we need to call the app.UseAuthentication.
+
+One thing to keep in mind is that the order the middlewares are added matters, so we need call the AddAuthentication before the AddAuthorization etc. 
+If the user is not authenticated, our API needs to be protected.
+
+The ControllerBase class exposes a property called User, of type *ClaimsPrincipal*. We can use this object to inspect the claims of the user:
+![](doc/userClaims.PNG)
+The claims contain user information like City, etc.
+With the claims information we can build an authorization layer and check block access to information. For example, we can forbid a user from one city to see the points of interest of another city, etc..
+This authorization layer is based on the definition of policies. Policies allow us to define complex authorization rules, by combining a set of claims together. This authorization strategy goes by 
+ABAC/CBAC/PBAC:
+Attribute based access control; Claims..; Policy based...
+This is the preferred approach this day over Role-base access control because they allow for the setup of complex rules like: users that live in cities with greater than 500k people, are allowed to do something..
+
+We learnt how to create a policy but, we have a more advanced course on auth here.
+The policy needs a name and a set of requirements:
+![](doc/policyRequirements.PNG)
+When all requirements are set to true, then the user is authorized.
+Then, we need to add the policies to our controller actions or to the whole controller so it applies for all actions.
+
+More often that not, we won't need to write our own token generation service. At big companies and enterprises, auth is handled at a central location and usually by a proven identity provider like Okta, identityServer, etc..
+This can be challenging during development to integrate with identity providers. For that, microsoft create user-jwts
+If we run the create command on project directory the donet cli scans through the launchSettings.json file and generate audience information, etc..
+We can specify those parameters to the command:
+*dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi*
+
+this command creates a token for the specified issuer and audience. We also need to check which key the donet user-jwts is using by running:
+
+*dotnet user-jwts key --issuer https://localhost:7169*
+
+The key is related to the issuer. The cli will give us the key that we can copy to the appSettings.Dev and continue to test the API.
+
+Further command combinations are possible: we can specify claims for the token as well, so that we can test authorization polocies:
+dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi --claim "city=Antwerp"
+
+Here we added the claim city=Antwerp that matches our authorization policy.
+We can access the list of tokens of the project. Check the CLI of donet user-jwts..
+
+This demo presented the basic security apps and token generations that is ok for basic apps.
+There are standars that improve on this: 
+1. OAuth2: is an open protocol to allow secure authorization in a simple and standard method from web, mobile and desktop applications to secure access to APIs. It allows the client apps to access APIs on behalf of the user or on the app itself. The tokens are named access tokens
+1. OpenId connect is added on the top of that. It is an identity layer on top of OAuth2. You can get a new token called identity token that can be used to login in applications. See for more details.
+
+# Versioning and documentation
+
+As APIs evolve, different versions start to co-exist. There is serveral ways of versioning an API:
+1. Versioning the URI
+1. Versioning the URI via query string parameters.
+
+![](doc/versioning.PNG)
+
+A popular way of versioning is to use Asp.Versioning.Mvs package to use URI versioning (one of most popular).
