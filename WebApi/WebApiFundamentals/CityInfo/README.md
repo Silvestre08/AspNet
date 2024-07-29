@@ -343,3 +343,33 @@ As APIs evolve, different versions start to co-exist. There is serveral ways of 
 ![](doc/versioning.PNG)
 
 A popular way of versioning is to use Asp.Versioning.Mvs package to use URI versioning (one of most popular).
+The ApiVersion attribute can be used at the controller level.
+If the url does not specify the api version, asp.net core will chose the version 1 as default version.
+We tested in this demo, a controller that had version 2, and we did not send any version in the URL: the server anser back with error 400 and with the message "Unsupported API version".
+The version can be requested by using the key-value pairs query string parameters:
+![](doc/requestVersion.PNG)
+The api version attribute can be applied multiple times.
+The api version attribute, like the authorization claims, can also be applied to the controller actions individually, to allow finer control.
+It is a good practice to deprecate mehotds before deleting them, so the clients are not faced with breaking changes with being notified first. 
+It is a considered a good practice to version the deprecated actions. See the response headers with the supported versions and deprecated versions:
+![](doc/apisupportedVersions.PNG.PNG)
+![](doc/apiDeprecatedVersion.PNG.PNG)
+
+There is nowadays a more popluar way of doing api versioning, with so called versioned routes.Versioned routes basically means that the route itself contains the version. Example: api/cities/V1
+![](doc/versionedRoute.PNG)
+
+Documenting an APi is crucial both for public or to inside inside an organization. This optimizes time and workflows because people know how to integrate with our API immediatly and lead to adoption immediatly. If people do not know how the API works, they can decide to develop their own.
+OpenAPI is a stander for documenting APIs using json or yaml. Basically two components are needed to document an API:
+1. A tool to generated the APi specification by inspecting our API
+1. Another tool that generates documentation UI from that specification.
+
+Some notes:
+
+![](doc/openApiDef.PNG)
+
+Swashbuckle generates and open APi specification from our webApi. It wrapps swagger-ui.
+We can see in program.cs some lines that add Swager to our API. they come as the default asp.net core template of a web api. 
+The default generated documentation at this point in the module is not necessarly the best. look at how the version urls were generated:
+![](doc/defaultSwagger.PNG)
+
+some notes for return types. using IActionResult<T> is good for documentation purposes because the schemas are auto generated. Swashbucle looks at our model types (nullable vs not) and data annotations to generate the schemas.

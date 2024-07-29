@@ -4,12 +4,15 @@ using CityInfo.Api.Services;
 using CityInfo.API.Services;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Asp.Versioning;
 
 namespace CityInfo.Api.Controllers
 {
-    [Route("api/cities/{cityId}/pointsofinterest")]
+    [Route("api/v{version:apiVersion}/cities/{cityId}/pointsofinterest")]
     //[Authorize(Policy = "MustBeFromAntwerp")]
     [ApiController]
+    [ApiVersion(1)]
+    [ApiVersion(2)]
     public class PointsOfInterestController : ControllerBase
     {
         private readonly ILogger<PointsOfInterestController> _logger;

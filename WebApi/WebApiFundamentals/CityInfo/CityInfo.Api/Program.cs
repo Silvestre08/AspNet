@@ -1,6 +1,5 @@
 using CityInfo.Api.DbContexts;
 using CityInfo.Api.Services;
-using CityInfo.API;
 using CityInfo.API.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +55,13 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim("city", "Antwerp");
     });
 });
+
+builder.Services.AddApiVersioning(versionSettings => 
+{
+    versionSettings.ReportApiVersions = true;
+    versionSettings.AssumeDefaultVersionWhenUnspecified = true;
+    versionSettings.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+}).AddMvc();
 
 //builder.Services.AddProblemDetails(problemDetails =>
 //problemDetails.CustomizeProblemDetails = ctx => {
