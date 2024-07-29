@@ -1,9 +1,11 @@
+using Asp.Versioning.ApiExplorer;
 using CityInfo.Api.DbContexts;
 using CityInfo.Api.Services;
 using CityInfo.API.Services;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using System.Reflection;
 
@@ -24,18 +26,6 @@ builder.Services.AddControllers(options =>
 
 }).AddNewtonsoftJson()
 .AddXmlDataContractSerializerFormatters();
-
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-
-// tell swashbuckler where to find the XML docs of the assembly api
-builder.Services.AddSwaggerGen(setupAction => 
-{
-    var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlCommentsFilePath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
-
-    setupAction.IncludeXmlComments(xmlCommentsFilePath);
-});
 
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
 builder.Services.AddTransient<IMailService, LocalMailService>();
@@ -66,12 +56,58 @@ builder.Services.AddAuthorization(options =>
     });
 });
 
+// configure swagger documentation
 builder.Services.AddApiVersioning(versionSettings => 
 {
     versionSettings.ReportApiVersions = true;
     versionSettings.AssumeDefaultVersionWhenUnspecified = true;
     versionSettings.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
-}).AddMvc();
+}).AddMvc()
+.AddApiExplorer(setup => { setup.SubstituteApiVersionInUrl = true; }); // while doing routed versioning, this substitutes the version parameter directly in the documentation.
+
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+// we need to call this so we can access the api version description provider.
+var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
+builder.Services.AddSwaggerGen(setupAction =>
+{
+
+    foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+    {
+        setupAction.SwaggerDoc($"{description.GroupName}", new Microsoft.OpenApi.Models.OpenApiInfo
+        {
+            Title = "City Info API",
+            Version = description.ApiVersion.ToString(),
+            Description = "Through this API you can access cities and their points of interest"
+        });
+    }
+
+    // tell swashbuckler where to find the XML docs of the assembly api
+    var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlCommentsFilePath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
+    setupAction.IncludeXmlComments(xmlCommentsFilePath);
+
+    setupAction.AddSecurityDefinition("CityInfoApiBearerAuth", new Microsoft.OpenApi.Models.OpenApiSecurityScheme 
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        Description = "Input a valid token to access this API"
+    });
+    setupAction.AddSecurityRequirement(new()
+    {
+        {
+            new ()
+            {
+                Reference = new OpenApiReference {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "CityInfoApiBearerAuth" }
+            },
+            new List<string>()
+        }
+    });
+});
+
+
 
 //builder.Services.AddProblemDetails(problemDetails =>
 //problemDetails.CustomizeProblemDetails = ctx => {
@@ -90,7 +126,15 @@ if (!app.Environment.IsDevelopment())
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(setupAction => 
+    {
+        // creates a new swagger endpoint per API versioning. 
+        var descriptions = app.DescribeApiVersions();
+        foreach (var description in descriptions) 
+        {
+            setupAction.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
+        }
+    });
 }
 
 app.UseHttpsRedirection();
