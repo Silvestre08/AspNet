@@ -211,8 +211,8 @@ A note on returning objects: APis usually do not return the same entities as the
 Usually, Data Transfer Objects (DTOs), are returned. In this demo we introduced the AutoMapper to map entities to DTOS and the repository pattern, to abstract the DBContext and the data access completely. Here are the advantages of the repository pattern:
 ![](doc/repositoryPattern.png)
 
-Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be returned. Check the *GetCityById* with or without points of interests (dtos are different).
-A thing to pay attention to is to retrieve child objects. If the parent does not exist, 404 should be returned. Not having the parent is different than an empty list. That is why we have *CityExistsAsync*.
+Some notes on gettings resources: _IActionResult_ is more appropiate when more than one Dto type can be returned. Check the _GetCityById_ with or without points of interests (dtos are different).
+A thing to pay attention to is to retrieve child objects. If the parent does not exist, 404 should be returned. Not having the parent is different than an empty list. That is why we have _CityExistsAsync_.
 
 ## Security
 
@@ -287,20 +287,21 @@ On our simple case, we are using ASP.NET classes to generate our own token. The 
 In our case, given that is a development machine, we stored the secret key in the appSettings.Development.json. In production they need to come from key vault.
 
 To require authentication on our API we did several things:
-1. On the controller, we declared the [Authorize] attribute. 
+
+1. On the controller, we declared the [Authorize] attribute.
 1. In program.cs we need to configure the service collection to require authentication and specify the conditions on which the token is valid:
-![](doc/authentication.PNG)
-In this picture, we can see that the token is valid if the audience is the same as the one in our configuration etc.
+   ![](doc/authentication.PNG)
+   In this picture, we can see that the token is valid if the audience is the same as the one in our configuration etc.
 1. In the middleware we need to call the app.UseAuthentication.
 
-One thing to keep in mind is that the order the middlewares are added matters, so we need call the AddAuthentication before the AddAuthorization etc. 
+One thing to keep in mind is that the order the middlewares are added matters, so we need call the AddAuthentication before the AddAuthorization etc.
 If the user is not authenticated, our API needs to be protected.
 
-The ControllerBase class exposes a property called User, of type *ClaimsPrincipal*. We can use this object to inspect the claims of the user:
+The ControllerBase class exposes a property called User, of type _ClaimsPrincipal_. We can use this object to inspect the claims of the user:
 ![](doc/userClaims.PNG)
 The claims contain user information like City, etc.
 With the claims information we can build an authorization layer and check block access to information. For example, we can forbid a user from one city to see the points of interest of another city, etc..
-This authorization layer is based on the definition of policies. Policies allow us to define complex authorization rules, by combining a set of claims together. This authorization strategy goes by 
+This authorization layer is based on the definition of policies. Policies allow us to define complex authorization rules, by combining a set of claims together. This authorization strategy goes by
 ABAC/CBAC/PBAC:
 Attribute based access control; Claims..; Policy based...
 This is the preferred approach this day over Role-base access control because they allow for the setup of complex rules like: users that live in cities with greater than 500k people, are allowed to do something..
@@ -315,11 +316,11 @@ More often that not, we won't need to write our own token generation service. At
 This can be challenging during development to integrate with identity providers. For that, microsoft create user-jwts
 If we run the create command on project directory the donet cli scans through the launchSettings.json file and generate audience information, etc..
 We can specify those parameters to the command:
-*dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi*
+_dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi_
 
 this command creates a token for the specified issuer and audience. We also need to check which key the donet user-jwts is using by running:
 
-*dotnet user-jwts key --issuer https://localhost:7169*
+_dotnet user-jwts key --issuer https://localhost:7169_
 
 The key is related to the issuer. The cli will give us the key that we can copy to the appSettings.Dev and continue to test the API.
 
@@ -330,13 +331,15 @@ Here we added the claim city=Antwerp that matches our authorization policy.
 We can access the list of tokens of the project. Check the CLI of donet user-jwts..
 
 This demo presented the basic security apps and token generations that is ok for basic apps.
-There are standars that improve on this: 
+There are standars that improve on this:
+
 1. OAuth2: is an open protocol to allow secure authorization in a simple and standard method from web, mobile and desktop applications to secure access to APIs. It allows the client apps to access APIs on behalf of the user or on the app itself. The tokens are named access tokens
 1. OpenId connect is added on the top of that. It is an identity layer on top of OAuth2. You can get a new token called identity token that can be used to login in applications. See for more details.
 
 # Versioning and documentation
 
 As APIs evolve, different versions start to co-exist. There is serveral ways of versioning an API:
+
 1. Versioning the URI
 1. Versioning the URI via query string parameters.
 
@@ -350,7 +353,7 @@ The version can be requested by using the key-value pairs query string parameter
 ![](doc/requestVersion.PNG)
 The api version attribute can be applied multiple times.
 The api version attribute, like the authorization claims, can also be applied to the controller actions individually, to allow finer control.
-It is a good practice to deprecate mehotds before deleting them, so the clients are not faced with breaking changes with being notified first. 
+It is a good practice to deprecate mehotds before deleting them, so the clients are not faced with breaking changes with being notified first.
 It is a considered a good practice to version the deprecated actions. See the response headers with the supported versions and deprecated versions:
 ![](doc/apisupportedVersions.PNG.PNG)
 ![](doc/apiDeprecatedVersion.PNG.PNG)
@@ -360,6 +363,7 @@ There is nowadays a more popluar way of doing api versioning, with so called ver
 
 Documenting an APi is crucial both for public or to inside inside an organization. This optimizes time and workflows because people know how to integrate with our API immediatly and lead to adoption immediatly. If people do not know how the API works, they can decide to develop their own.
 OpenAPI is a stander for documenting APIs using json or yaml. Basically two components are needed to document an API:
+
 1. A tool to generated the APi specification by inspecting our API
 1. Another tool that generates documentation UI from that specification.
 
@@ -368,8 +372,37 @@ Some notes:
 ![](doc/openApiDef.PNG)
 
 Swashbuckle generates and open APi specification from our webApi. It wrapps swagger-ui.
-We can see in program.cs some lines that add Swager to our API. they come as the default asp.net core template of a web api. 
+We can see in program.cs some lines that add Swager to our API. they come as the default asp.net core template of a web api.
 The default generated documentation at this point in the module is not necessarly the best. look at how the version urls were generated:
 ![](doc/defaultSwagger.PNG)
 
 some notes for return types. using IActionResult<T> is good for documentation purposes because the schemas are auto generated. Swashbucle looks at our model types (nullable vs not) and data annotations to generate the schemas.
+
+# Testing
+
+This section talks about api testing, at an endpoint level, not unit tests.
+It is possible to test the api endpoints with:
+
+1. Swagger UI (manually and limiting)
+1. Using tools like Postman or similar.
+1. HTTP REPL (needs to be installed)
+1. Using .http files from visual studio.
+
+HTTP REPL allows us to test the API endpoints from the command line. It connects to the api and navigates through its routes like we navigate through directories, with a CD command.
+Here is an explample how to to test a GET method. First, we authenticate:
+
+![](doc/GetToken.png)
+
+We authenticated by calling post on the route of the aunthentication controller.
+After obtaining the toke, we included in all headers.
+Then we navigate to the cities controller and get all cities:
+
+![](doc/getcitiesRepl.png)
+
+We can configure repl to work with notepad and everytime we send a post, we can paste in the notepad the request body.
+
+Another way of testing is to use .http files. This feature is recent and under development. Available with .net8.
+We can use the window from vs called _Endpoints Explorer_ and we can generate the requests directly on the .http file. We can also debug the API using this file.
+We can test everything without even leaving visual studio.
+
+# Deploying
