@@ -1,6 +1,60 @@
-@CityInfo.Api_HostAddress = http://localhost:5159
+@CityInfo.Api_HostAddress = https://localhost:7127
+@schema=https
+@hostname=localhost 
+@port=7127
 
-GET {{CityInfo.Api_HostAddress}}/weatherforecast/
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+
+###
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+Accept: application/xml
+
+###
+
+
+// This won't work.
+# @name createpoi
+POST {{schema}}://{{hostname}}:{{port}}/api/v2/cities/1/pointsofinterest
 Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "A name for testing",
+  "description": "A description for testing"
+} 
+
+###
+
+@poiid = {{createpoi.response.body.id}}
+
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities/1/pointsofinterest/{{poiid}}
+Accept: application/json
+
+###
+
+// get a token 
+POST {{schema}}://{{hostname}}:{{port}}/api/authentication/authenticate
+Content-Type: application/json
+
+{
+    "username": "KevinDockx",
+    "password": "This is a relatively long sentence that acts as my password"
+}
+
+###
+
+// authenticated GET request
+GET {{schema}}://{{hostname}}:{{port}}/api/v2/cities
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZ2l2ZW5fbmFtZSI6IktldmluIiwiZmFtaWx5X25hbWUiOiJEb2NreCIsImNpdHkiOiJBbnR3ZXJwIiwibmJmIjoxNzIyNTA1MjA2LCJleHAiOjE3MjI1MDg4MDYsImlzcyI6Imh0dHBzOi8vbG9jYWxob3N0OjcxNjkiLCJhdWQiOiJjaXR5aW5mb2FwaSJ9.hnZwHOQ7C8aoxXO9h1Ws-xp-CjzRYHuh425W8I5Rvs4
+
+###
+
+POST {{CityInfo.Api_HostAddress}}/api/authentication/authenticate
+Content-Type: application/json
+
+{
+  //AuthenticationRequestBody
+}
 
 ###
