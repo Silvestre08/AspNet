@@ -406,3 +406,36 @@ We can use the window from vs called _Endpoints Explorer_ and we can generate th
 We can test everything without even leaving visual studio.
 
 # Deploying
+
+Publishing an api means creating the set of files required to run the application.
+So everytime we build it, we are publishing it.
+So after this files are created, they need to be moved over to a host.
+Host is the environment these files are copied to, the hosting server.
+Deploying meaning copying the files to a host.
+Locally it is the bin folder. Once files are in the bing, the process manager starts the application. Our process manager is Kestrel webserver, as default in dev environment.
+There are several factors we need to consider when deciding how to host our application:
+
+1. Scalability
+1. Ease of maintenance
+1. Cost
+1. Application-specific requirements
+1. Organizational preferences
+1. Level of control over the host environment.
+   There lots of options, azure, aws, files in one location, docker, kubernets, automatically scalling..
+
+Run on azure app service is a popular option (no concerns over infrastructure).
+When using azure app services, with proxies and load balancers, these components often obscure information about the request, changing its headers:
+![](doc/informationforwarded.png)
+
+We can configure the API with the forward headers middleware to ensure the requests are properly handled by readeing the request headers. That information comes in the header as we can see in the pciture The forwrd headers middleware should be place before almost anything in the pipeline.
+
+In this demo we created an azure subscription.
+We selected deploy to windows azure. We added to the default resource group.
+Resource groups are logical containers for organizaging and managing azure resources. Resources in a resource group share a common lifecycle, so we can deploy update and delete them together as a group.
+It is a way in azure to group stuff together to simplify common tasks like resource management, monitoring and access control in Azure.
+In real life, we would want to create a resource group to our application and link all the resources that our application needs under the same resource group.
+Hosting plan come in different tiers, check pricing.
+Azure virtual machine -> we need to manage infrastructure (to be avoided if possible).
+
+We can add other app services to deploy together with the one created. A deployment can consist of multiple steps and app services, a key vault, a database server, Next we can configure API management (Appium). It will add a layer in front of our API, a gateway. We can choose how to expose, secure, routing, response transformation, token validation and analytics.
+Check outher repos for this.

@@ -1,7 +1,11 @@
 using Asp.Versioning.ApiExplorer;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using CityInfo.Api.DbContexts;
 using CityInfo.Api.Services;
 using CityInfo.API.Services;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,12 +16,41 @@ using System.Reflection;
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .WriteTo.Console()
-    .WriteTo.File("logs/cityinfo.txt", rollingInterval: RollingInterval.Day)
+    //.WriteTo.File("logs/cityinfo.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+if (environment == Environments.Development)
+{
+    builder.Host.UseSerilog(
+        (context, loggerConfiguration) => loggerConfiguration
+            .MinimumLevel.Debug()
+            .WriteTo.Console());
+}
+else
+{
+    var secretClient = new SecretClient(
+            new Uri("https://kelvaultexperiment.vault.azure.net/"),
+            new DefaultAzureCredential());
+    builder.Configuration.AddAzureKeyVault(secretClient,
+        new KeyVaultSecretManager());
+
+
+    builder.Host.UseSerilog(
+        (context, loggerConfiguration) => loggerConfiguration
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .WriteTo.File("logs/cityinfo.txt", rollingInterval: RollingInterval.Day)
+            .WriteTo.ApplicationInsights(new TelemetryConfiguration
+            {
+                InstrumentationKey = builder.Configuration["ApplicationInsightsInstrumentationKey"]
+            }, TelemetryConverter.Traces));
+}
+
+
 //builder.Logging.ClearProviders();
 //builder.Logging.AddConsole();
-builder.Host.UseSerilog();
 // Add services to the container.
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers(options =>
@@ -43,7 +76,9 @@ builder.Services.AddAuthentication("Bearer")
             ValidIssuer = builder.Configuration["Authentication:Issuer"],
             ValidAudience = builder.Configuration["Authentication:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-               Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
+               //Convert.FromBase64String("c187nb9P1ad94deWVO3QAAEF1DhYjuKpCsmDUjGbZLQ=")
+               Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"])
+               )
         };
     }
     );
@@ -115,6 +150,9 @@ builder.Services.AddSwaggerGen(setupAction =>
 //    ctx.ProblemDetails.Extensions.Add("Server", Environment.MachineName);
 //});
 
+builder.Services.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | 
+Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto);
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -122,9 +160,11 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler();
 }
 
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
     app.UseSwagger();
     app.UseSwaggerUI(setupAction => 
     {
@@ -135,7 +175,7 @@ if (app.Environment.IsDevelopment())
             setupAction.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", description.GroupName.ToUpperInvariant());
         }
     });
-}
+//}
 
 app.UseHttpsRedirection();
 app.UseRouting();
