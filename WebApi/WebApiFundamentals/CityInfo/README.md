@@ -445,5 +445,22 @@ We used application insights for diagnostics and logging.
 Altough application insights is much more than that.
 How do we log for application insights? By configuring another serilog sink in program.cs.
 We need to enable application insights on azure portal. Azure will generate a key that will correlate our logging sink to our resource group in devops. Serilog needs that key to send the logs. Check program.cs
+The application insights was created in the same resrouce group.
 
-The appSettings.production needed to be updated in order to run the app in azure. We need a connection string and we need to fetch the secrets from azure key vault. Azure key vault is a service that we can use to sote and manage cryptographic keys, secretes and certificates used by cloud applications or services.
+The appSettings.production needed to be updated in order to run the app in azure. We need a connection string and we need to fetch the secrets from azure key vault. 
+Azure key vault is a service that we can use to sote and manage cryptographic keys, secretes and certificates used by cloud applications or services.
+The key vault generated in the azure portal has the URL that we inserted in our application:
+![](doc/vaultProps.PNG)
+
+We added a nugget package to fetch the secrets from the key vaul that have the same key has in the app settings. To set the name of the secret follow a naming convention with "--":
+
+![](doc/SecretNamingConvention.PNG)
+
+If we check our app settings we also have an Authentication object with a SecretForKey property.
+
+How does the Keyvaul know that is our application asking for secrets? We used a good practice in Azure Portal called managed identity. We configured our key vault to accept reads from our application by defining access policy:
+![](doc/KeyVaultAccessPolicies.PNG)
+Our application has an Id in the Azure portal and we added this id to the key vault, so our app authenticates itself to the key vault and they key vault  accepts requests for secrets. Note we only defined read policies so we do not create secrets with our app.
+
+For this demo we used the publish functionality from visual studio. But in real-world scenarios is almost never used. The deployment is part of CI/CD pipelines and there is also the API management functionality that should be checked in other trainnings.
+In real-world scenarios we would not have a SQL as well in production.
