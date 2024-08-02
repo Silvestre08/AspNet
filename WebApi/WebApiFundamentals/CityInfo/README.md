@@ -377,7 +377,14 @@ The default generated documentation at this point in the module is not necessarl
 ![](doc/defaultSwagger.PNG)
 
 some notes for return types. using IActionResult<T> is good for documentation purposes because the schemas are auto generated. Swashbucle looks at our model types (nullable vs not) and data annotations to generate the schemas.
+By adding XML docs to our controllers, we can genrate a XML comment file and configure swagger to use this file to show in the documentation.
+We need to make sure that we generate the XML from the build properties of our api project.
+We included in the documentation different versions of the API, XML docs, return codes etc.
+By using attributes *ProducesResponseType* we can document differnt errors codes, etc
+Error codes can also be described by response tags in the XML docs.
+We can add remarks to our XML docs a give sample requests and reponses.
 
+We can add authorization to our documentation by specifying a security definition and a security requirement.
 # Testing
 
 This section talks about api testing, at an endpoint level, not unit tests.
