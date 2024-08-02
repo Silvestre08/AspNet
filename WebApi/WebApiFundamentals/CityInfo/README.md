@@ -439,3 +439,11 @@ Azure virtual machine -> we need to manage infrastructure (to be avoided if poss
 
 We can add other app services to deploy together with the one created. A deployment can consist of multiple steps and app services, a key vault, a database server, Next we can configure API management (Appium). It will add a layer in front of our API, a gateway. We can choose how to expose, secure, routing, response transformation, token validation and analytics.
 Check outher repos for this.
+
+The url the app runs on depends on the publishing profile name.
+We used application insights for diagnostics and logging.
+Altough application insights is much more than that.
+How do we log for application insights? By configuring another serilog sink in program.cs.
+We need to enable application insights on azure portal. Azure will generate a key that will correlate our logging sink to our resource group in devops. Serilog needs that key to send the logs. Check program.cs
+
+The appSettings.production needed to be updated in order to run the app in azure. We need a connection string and we need to fetch the secrets from azure key vault. Azure key vault is a service that we can use to sote and manage cryptographic keys, secretes and certificates used by cloud applications or services.

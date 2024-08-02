@@ -80,7 +80,7 @@ builder.Services.AddAuthentication("Bearer")
                Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"])
                )
         };
-    }
+    } 
     );
 builder.Services.AddAuthorization(options =>
 {
