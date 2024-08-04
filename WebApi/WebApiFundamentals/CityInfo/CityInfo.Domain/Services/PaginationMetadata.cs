@@ -1,4 +1,4 @@
-﻿namespace CityInfo.Api.Services
+﻿namespace CityInfo.Domain.Services
 {
     public class PaginationMetadata
     {

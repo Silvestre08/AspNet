@@ -1,9 +1,9 @@
-﻿using CityInfo.Api.DbContexts;
-using CityInfo.Api.Entities;
-using CityInfo.Api.Services;
+﻿using CityInfo.Domain.Entities;
+using CityInfo.Domain.Services;
+using CityInfo.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 
-namespace CityInfo.API.Services
+namespace CityInfo.Infrastructure
 {
     public class CityInfoRepository : ICityInfoRepository
     {

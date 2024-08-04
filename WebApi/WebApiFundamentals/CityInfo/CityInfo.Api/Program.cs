@@ -2,12 +2,9 @@ using Asp.Versioning.ApiExplorer;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
-using CityInfo.Api.DbContexts;
-using CityInfo.Api.Services;
-using CityInfo.API.Services;
+using CintyInfo.Infrastructure;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -61,9 +58,7 @@ builder.Services.AddControllers(options =>
 .AddXmlDataContractSerializerFormatters();
 
 builder.Services.AddSingleton<FileExtensionContentTypeProvider>();
-builder.Services.AddTransient<IMailService, LocalMailService>();
-builder.Services.AddDbContext<CityInfoContext>(options => options.UseSqlite(builder.Configuration["ConnectionStrings:CityInfoDBConnectionString"]));
-builder.Services.AddScoped<ICityInfoRepository, CityInfoRepository>();
+builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>

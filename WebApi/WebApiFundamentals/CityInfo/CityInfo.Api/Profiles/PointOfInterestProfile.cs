@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
-using CityInfo.Api.Entities;
 using CityInfo.Api.Models;
+using CityInfo.Domain.Entities;
 
-namespace CityInfo.Api.Profiles
+namespace CityInfo.Infrastructure.Profiles
 {
     public class PointOfInterestProfile : Profile
     {

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace CityInfo.Api.Entities
+namespace CityInfo.Domain.Entities
 {
     public class City
     {

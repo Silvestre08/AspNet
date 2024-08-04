@@ -1,4 +1,7 @@
-﻿namespace CityInfo.API.Services
+﻿using CityInfo.Domain.Services;
+using Microsoft.Extensions.Configuration;
+
+namespace CityInfo.Infrastructure.Services
 {
     public class CloudMailService : IMailService
     {

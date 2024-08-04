@@ -1,6 +1,6 @@
-﻿using CityInfo.Api.Entities;
+﻿using CityInfo.Domain.Entities;
 
-namespace CityInfo.Api.Services
+namespace CityInfo.Domain.Services
 {
     public interface ICityInfoRepository
     {

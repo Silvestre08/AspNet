@@ -1,7 +1,7 @@
 ﻿using Asp.Versioning;
 using AutoMapper;
 using CityInfo.Api.Models;
-using CityInfo.Api.Services;
+using CityInfo.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
@@ -36,7 +36,6 @@ namespace CityInfo.Api.Controllers
             Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(paginationMetadata));
             return Ok(_mapper.Map<IEnumerable<CityWithoutPointsOfInterestDto>>(cityEntities));
         }
-
 
 
         /*

@@ -4,7 +4,7 @@
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace CityInfo.Api.Migrations
+namespace CityInfo.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class AddSeedDataMigration : Migration

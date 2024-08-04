@@ -1,8 +1,7 @@
-﻿using CityInfo.Api.Entities;
+﻿using CityInfo.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Sqlite;
 
-namespace CityInfo.Api.DbContexts
+namespace CityInfo.Infrastructure.DbContexts
 {
     public class CityInfoContext : DbContext
     {

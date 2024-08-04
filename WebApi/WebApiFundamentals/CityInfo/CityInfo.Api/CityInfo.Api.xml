@@ -13,29 +13,5 @@
             <returns>A city with or without the points of interest.</returns>
             <response code="200">Returns the requested city.</response>
         </member>
-        <member name="T:CityInfo.Api.Migrations.CityInfoDBInitialMigration">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.CityInfoDBInitialMigration.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.CityInfoDBInitialMigration.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.CityInfoDBInitialMigration.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
-            <inheritdoc />
-        </member>
-        <member name="T:CityInfo.Api.Migrations.AddSeedDataMigration">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.AddSeedDataMigration.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.AddSeedDataMigration.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
-            <inheritdoc />
-        </member>
-        <member name="M:CityInfo.Api.Migrations.AddSeedDataMigration.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
-            <inheritdoc />
-        </member>
     </members>
 </doc>

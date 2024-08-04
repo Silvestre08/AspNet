@@ -1,11 +1,10 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using CityInfo.Api.Models;
-using CityInfo.Api.Services;
-using CityInfo.API.Services;
+using CityInfo.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Asp.Versioning;
 
 namespace CityInfo.Api.Controllers
 {
@@ -83,7 +82,7 @@ namespace CityInfo.Api.Controllers
                 return NotFound();
             }
 
-            var finalPointOfInterest = _mapper.Map<Entities.PointOfInterest>(pointOfInterest);
+            var finalPointOfInterest = _mapper.Map<Domain.Entities.PointOfInterest>(pointOfInterest);
 
             await _cityInfoRepository.AddPointOfInterestForCityAsync(
                 cityId, finalPointOfInterest);

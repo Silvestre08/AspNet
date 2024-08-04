@@ -3,30 +3,33 @@
 This web api was started as the template for web APIs in visual studio.
 The only nugget package that gets imported out-of-the box is the Swashbuckler,
 so we use the open API standard to document the API (swagger).
-It is basically a new endpoint with a web ui documenting all the enpoints of an api.
+It is basically a new endpoint documenting all the enpoints of the api.
 
 _LaunchSettings.json_ is an important file in the template. It is used to setup the local environment for development.
 It is not deployed and it contains profile settings.
 An http profile and a https profile that is used by kestrel server to launch the project.
 Another profile is IIS server to launch the project using the iis.
-The profile dictates the url the profile runs on and the port.
+The profile dictates the url the application runs on and the port.
 
 ## Solution structure
 
-_AppSettings.json_ contains application settings with some default configuration, like logging. By default, it also create AppSettings.Development.json that allows us to override some default settings just for our development environment.
-We have a Controllers folder with a default controller (part of the mvc part).
-CityInfo.API.http can be removed. It is used to test the api but we can do that with postman.
+_AppSettings.json_ contains application settings with some default configuration, like logging. 
+By default, it also create AppSettings.Development.json that allows us to override some default settings just for our development environment.
+We have a Controllers folder with a default controller (it is related with the MVC architecture).
+CityInfo.API.http can be removed. It is used to test the api from visual studio but we can do that with postman.
+We elaborate more on this file on the testing section. 
 Program.cs contains the startup the application, in this case a web application that needs to be hosted.
 The builder can be used for that. It is here that dependency injection gets configured as well.
 The last section configures the API middlewares.
 The way the middleware gets configured dictates how the requests get processed.
-The middleware added result in a request pipeline. The order on which these middleware are added matters:
+The middlewares added result in a request pipeline. The order on which these middlewares are added matters:
 ![](requestPipeline.png)
 
 The result of the middleware processing is a response.
 Middleware that can be added are, for example, authentication middlewares or diagnostics middlewares.
 Each component in the pipeline chooses to pass the request to the next component on the pipeline or not.
 On example of that is the authentication middleware. If authentication is not successful, the request does not get processed.
+This pipeline ressembles one famous gang of four design patterns: chain of responsibility.
 In _Program.cs_ we also observe code that checks on which environment the application is running.
 Asp.Net, by default, contains the environments: Development, Staging and Production.
 The application host provides a way of accessing the application environment.
@@ -34,22 +37,23 @@ The profile dictates the url and port the application runs on.
 
 ## MVC
 
-Mode view controller is the most common used pattern to develop web apis.
-Unlike with front end applications, we do not have a view within a web api.
-The MVC pattern focus heavenly in the spearation of concertes, improves testability and promotes code reuse.
+Mode view controller is the most common pattern that is used to develop web apis.
+Unlike front end applications, we do not have a view within a web api.
+The MVC pattern focus heavly in the spearation of concerns, improves testability and promotes code reuse.
 MVC is the pattern used in the presentation layer, not on the other layers of the application.
 Parts of MVC:
 
-1. Model: represents application data and/or business logic and rules
+1. Model: represents application data and/or business logic and rules.
 1. View: representation of the data.
 1. Controller: handles user input and translates that to model data the view can work with.
 1. The controller chooses the view and provides it with data.
 
-In an API our view does not exist or it is the representation of data, like json to be sent over the wire.
-The MVC architecture:
+In an API our view does not exist or it is the representation of data itself to be sent over the wire.
+The MVC architecture explained:
+
 ![](doc/MVC.png)
 
-We introduced our cities controller that inherits from controller base (controller has more stuff not needed in case of a web api)
+We introduced our cities controller that inherits from controller base (controller has more stuff not needed in case of a web api).
 THe Api controller attribute is not strictly necessary but it improves dev experience while developing APIs (errors and validations).
 
 ## Routing
@@ -63,15 +67,15 @@ By calling MapControllers no conventions are applied and we can just use attribu
 ![](doc/attribute%20routing.png)
 
 The Route attribute can be applied at the controller level class, which defines a base route to the controller itself and avoids some repetition on all actions.
-If we use [Route("api/[Controller]")] we basically map the url to the controller name. In our case the cities controller will have the url .../api/cities.
-Be careful with this approach because renaming the controller would change it to the clients.
-Each controller action can have the more specific URL parts and parameters. Parameters are used in atributtes with curly braces: "{cityId}"
+If we use [Route("api/[Controller]")] we basically map the url to the controller name. In our case the cities controller will have the url *.../api/cities*.
+Be careful with this approach because renaming the controller would change the route and clients dependent on it would break.
+Each controller action can have more specific URL parts and parameters. Parameters are used in atributtes with curly braces: "{cityId}"
 
 ## Status Codes
 
 Status codes are a very important piece of public APIs.
-Status codes are the only thing the client has in order to know if the request worked out as expected.
-200 Code means the request went ok. Sometimes is common for people to send 200 if something went wrong (like the routing was ok but an entity was not found).
+Status codes are the only thing the client has so it knows if the request worked out as expected or not.
+200 Code means the request went ok. Sometimes it is common for people to send 200 if something went wrong (like the routing was ok but an entity was not found).
 500 means internal server error. Do not use this one if the client made a mistake.
 There are several levels of status codes:
 
@@ -86,14 +90,14 @@ There are several levels of status codes:
    1. 401: Unauthorized. No Authentication
    1. 403: Forbidden. Authentication succeded but authorization did not.
    1. 404: requested resource
-   1. 409: conflict. This is meant for scenarios where concurrency issues happen (two parallel requests updating the same resource at the same time).
-1. Level 500: server mistakes
+   1. 409: conflict. This is meant for concurrwncy scenarios (two parallel requests updating the same resource at the same time).
+1. Level 500: server mistakes and exceptions
 
-Asp.net core has a few helper methods to allow us to return responses with the proper error codoes in case of errors or successfull responses.
+Asp.net core has a few helper methods to allow us to return responses with proper error codes in case of errors or successfull responses.
 Responses are returned as _ActionResults_ or _ActionResults<T>_.
 But what to do with child resources?
 
-In our example, we have points of interest that are dependent on the city objects: there is not a point of interest without a city.
+In our example, we have points of interest that are dependent on city objects: there is not a point of interest without a city.
 Notice the route of the point of interest controller. Because it makes no sense to have a point of interest without a city, the points of interest controller reflects that on its URL.
 The base route of the controller itself is already reflecting that by asking for a city id.
 
@@ -411,6 +415,9 @@ We can configure repl to work with notepad and everytime we send a post, we can 
 Another way of testing is to use .http files. This feature is recent and under development. Available with .net8.
 We can use the window from vs called _Endpoints Explorer_ and we can generate the requests directly on the .http file. We can also debug the API using this file.
 We can test everything without even leaving visual studio.
+
+This API does not have webhooks. Webhooks are the wat most applications communicate with one another. When an application want to inform the other one about certain events, that is done via webhoooks. Example: an user creates a point of interest in google maps... We can integrate with google maps. When the user creates a point of interest in google maps, google will call a webhook in our app so we create the webhook in our application.
+We can use tools like postman and ngrok to test webhooks.
 
 # Deploying
 
