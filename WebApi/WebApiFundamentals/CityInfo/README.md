@@ -477,4 +477,4 @@ How does the Keyvaul know that is our application asking for secrets? We used a 
 Our application has an Id in the Azure portal and we added this id to the key vault, so our app authenticates itself to the key vault and they key vault  accepts requests for secrets. Note we only defined read policies so we do not create secrets with our app.
 
 For this demo we used the publish functionality from visual studio. But in real-world scenarios is almost never used. The deployment is part of CI/CD pipelines and there is also the API management functionality that should be checked in other trainnings.
-In real-world scenarios we would not have a SQL as well in production.
+In real-world scenarios we would not have a SQL lite in production.
