@@ -1,22 +1,22 @@
-﻿using Globomantics.Models;
-using Globomantics.Repositories;
+﻿using Globomantics.Client.ApiServices;
+using Globomantics.Client.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Globomantics.Controllers;
 
 public class ConferenceController : Controller
 {
-    private readonly IConferenceRepository repo;
+    private readonly IConferenceApiService _ApiService;
 
-    public ConferenceController(IConferenceRepository repo)
+    public ConferenceController(IConferenceApiService service)
     {
-        this.repo = repo;
+        _ApiService = service;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         ViewBag.Title = "Organizer - Conference Overview";
-        return View(repo.GetAll());
+        return View(await _ApiService.GetAll());
     }
 
     public IActionResult Add()
@@ -26,10 +26,10 @@ public class ConferenceController : Controller
     }
 
     [HttpPost]
-    public IActionResult Add(ConferenceModel model)
+    public async Task<IActionResult> Add(ConferenceModel model)
     {
         if (ModelState.IsValid)
-            repo.Add(model);
+            await _ApiService.Add(model);
 
         return RedirectToAction("Index");
     }

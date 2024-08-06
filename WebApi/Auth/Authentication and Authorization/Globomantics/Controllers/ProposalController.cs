@@ -1,27 +1,26 @@
-﻿using Globomantics.Models;
-using Globomantics.Repositories;
-using Microsoft.AspNetCore.Authorization;
+﻿using Globomantics.Client.ApiServices;
+using Globomantics.Client.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Globomantics.Controllers;
 public class ProposalController : Controller
 {
-    private readonly IConferenceRepository conferenceRepo;
-    private readonly IProposalRepository proposalRepo;
+    private readonly IConferenceApiService _ConferenceApiService;
+    private readonly IProposalApiService _ProposalApiService;
 
-    public ProposalController(IConferenceRepository conferenceRepo, IProposalRepository proposalRepo)
+    public ProposalController(IConferenceApiService conferenceApiService, IProposalApiService proposalApiService)
     {
-        this.conferenceRepo = conferenceRepo;
-        this.proposalRepo = proposalRepo;
+        _ConferenceApiService = conferenceApiService;
+        _ProposalApiService = proposalApiService;
     }
 
-    public IActionResult Index(int conferenceId)
+    public async Task<IActionResult> Index(int conferenceId)
     {
-        var conference = conferenceRepo.GetById(conferenceId);
+        var conference = await _ConferenceApiService.GetById(conferenceId);
         ViewBag.Title = $"Speaker - Proposals For Conference {conference.Name} {conference.Location}";
         ViewBag.ConferenceId = conferenceId;
 
-        return View(proposalRepo.GetAllForConference(conferenceId));
+        return View(await _ProposalApiService.GetAll(conferenceId));
     }
 
     public IActionResult AddProposal(int conferenceId)
@@ -31,16 +30,16 @@ public class ProposalController : Controller
     }
 
     [HttpPost]
-    public IActionResult AddProposal(ProposalModel proposal)
+    public async Task<IActionResult> AddProposal(ProposalModel proposal)
     {
         if (ModelState.IsValid)
-            proposalRepo.Add(proposal);
+            await _ProposalApiService.Add(proposal);
         return RedirectToAction("Index", new { conferenceId = proposal.ConferenceId });
     }
 
-    public IActionResult Approve(int proposalId)
+    public async Task<IActionResult> Approve(int proposalId)
     {
-        var proposal = proposalRepo.Approve(proposalId);
+        var proposal = await _ProposalApiService.Approve(proposalId);
         return RedirectToAction("Index", new { conferenceId = proposal.ConferenceId });
     }
 }

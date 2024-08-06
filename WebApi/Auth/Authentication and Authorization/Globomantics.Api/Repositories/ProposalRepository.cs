@@ -1,4 +1,4 @@
-﻿using Globomantics.Models;
+﻿using Globomantics.Client.Models;
 
 namespace Globomantics.Repositories;
 
@@ -21,10 +21,16 @@ public class ProposalRepository : IProposalRepository
         return model.Id;
     }
 
-    public ProposalModel Approve(int proposalId)
+    public ProposalModel? Approve(int proposalId)
     {
-        var proposal = proposals.First(p => p.Id == proposalId);
-        proposal.Approved = true;
+        var proposal = proposals.FirstOrDefault(p => p.Id == proposalId);
+        if (proposal != null)
+            proposal.Approved = true;
         return proposal;
+    }
+
+    public ProposalModel? GetOne(int id)
+    {
+        return proposals.FirstOrDefault(p => p.Id == id);
     }
 }
