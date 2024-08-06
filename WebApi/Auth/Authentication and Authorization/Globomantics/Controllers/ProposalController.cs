@@ -30,7 +30,7 @@ public class ProposalController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddProposal(ProposalModel proposal)
+    public async Task<IActionResult> AddProposal(ProposalModel proposal) 
     {
         if (ModelState.IsValid)
             await _ProposalApiService.Add(proposal);
