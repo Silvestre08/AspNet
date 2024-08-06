@@ -113,6 +113,7 @@ builder.Services.AddControllers(options =>
      {
          Link= "https://httpstatuses.com/500",
          Title="Something went wrong internally, please contact support"
+        
      };
      options.ClientErrorMapping[StatusCodes.Status401Unauthorized].Link= "https://httpstatuses.com/401";
  });
