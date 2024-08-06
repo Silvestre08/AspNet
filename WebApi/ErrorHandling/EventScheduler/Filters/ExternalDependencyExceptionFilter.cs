@@ -20,7 +20,7 @@ namespace EventScheduler.Filters
                     StatusCode = (int)httpResponseException.StatusCode
                 };
 
-                context.ExceptionHandled = true;
+                context.ExceptionHandled = true; // this is critical, otherwise the controller will handle the exception and it will route to the exception page.
             }
         }
     }

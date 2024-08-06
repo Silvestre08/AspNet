@@ -124,17 +124,14 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseExceptionHandler("/errorhandler/error-development");
+    app.UseExceptionHandler("/errorhandler/error-development"); // tells the route of our error handler controller 
 
 }
 else
 {
 
     //app.AddErrorHandler(app.Services.GetService<ILogger<IEventSchedulerException>>());
-    app.UseMiddleware<CustomErrorMiddleWare>();
-    
-
-
+    app.UseMiddleware<CustomErrorMiddleWare>(); 
 }
 
 app.UseHttpsRedirection();

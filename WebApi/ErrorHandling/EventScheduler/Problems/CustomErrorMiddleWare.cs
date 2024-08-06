@@ -14,6 +14,7 @@ namespace EventScheduler.Problems
             _next = next;
             _logger= logger;
         }
+
         public async Task InvokeAsync(HttpContext httpContext)
         {
             try
@@ -25,6 +26,7 @@ namespace EventScheduler.Problems
                 await HandleExceptionAsync(httpContext, ex);
             }
         }
+
         private async Task HandleExceptionAsync(HttpContext context, Exception err)
         {
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
