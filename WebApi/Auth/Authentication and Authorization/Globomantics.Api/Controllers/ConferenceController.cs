@@ -6,6 +6,7 @@ namespace Globomantics.Server.Controllers
 {
     [ApiController]
     [Route("conference")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public class ConferenceController : Controller
     {
         private readonly IConferenceRepository _Repo;

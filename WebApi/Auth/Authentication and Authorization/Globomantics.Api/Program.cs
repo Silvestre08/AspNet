@@ -1,3 +1,5 @@
+using Globomantics.Api;
+using Globomantics.Api.ApiKey;
 using Globomantics.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +12,8 @@ builder.Services.AddScoped<IProposalRepository, ProposalRepository>();
 
 var app = builder.Build();
 
+// Authentication with API key
+app.UseApiKeyAuthentication();
 app.UseAuthorization();
 
 app.UseSwagger();
