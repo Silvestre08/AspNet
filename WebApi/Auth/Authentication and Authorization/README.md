@@ -154,12 +154,14 @@ The cookie contains the claims and the rest of the information to create the Cla
 What about other apps like desktop apps? They do not work with cookies.
 Antoher authenication scheme, Bearer toker scheme, can be used.
 To keep in mind that we can have more than just one authentication scheme.
-The claims information is not sent via the token. When the user logs in, the token is issued.
-Tokens do not need a browser and they are not restricted in the same domain.
+The claims information is now sent via the token. When the user logs in, the token is issued.
+Tokens do not need a browser and they are not restricted to the same domain.
 We checked in the web api fundamentals course, we've seen already the bearer token authentication.
-Here we included console app for demonstration purposes. 
-Whem we havr architectures like this tokens become a nightmare to manage:
+In asp.net core 8, it was introduced ASP.COre identity, that comes with EF core out of the box solution to manage users, roles, etc. 
+Whem we have architectures like this tokens become a nightmare to manage:
 
 ![](doc/multipleapis.PNG)
 Each api needs to check the token, login, etc
 This is where OAuth2 and OpenIdConnect come into play.
+
+# OpenId connect and OAuth2
