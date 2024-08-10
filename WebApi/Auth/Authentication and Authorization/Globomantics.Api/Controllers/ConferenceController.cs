@@ -1,4 +1,5 @@
-﻿using Globomantics.Client.Models;
+﻿using Globomantics.Api;
+using Globomantics.Client.Models;
 using Globomantics.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace Globomantics.Server.Controllers
     [ApiController]
     [Route("conference")]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [TypeFilter(typeof(ApiKeyAttribute))]
     public class ConferenceController : Controller
     {
         private readonly IConferenceRepository _Repo;

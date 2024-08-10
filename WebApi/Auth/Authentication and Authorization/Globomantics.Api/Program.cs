@@ -13,7 +13,8 @@ builder.Services.AddScoped<IProposalRepository, ProposalRepository>();
 var app = builder.Build();
 
 // Authentication with API key
-app.UseApiKeyAuthentication();
+//app.UseApiKeyAuthentication();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseSwagger();
