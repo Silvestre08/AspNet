@@ -125,12 +125,12 @@ The API can work with multiple keys, usually one different key for each external
 # Cookie authentication
 
 If Apis need to know who the user is, keys won't work.
-One ways to send data in a safe API to the APIs is by using cookies. To get an identity cookie users first have to present proof of who they are.
+One ways to send data in a safe way to the APIs is by using cookies. To get an identity cookie users first have to present proof of who they are.
 This is the authentication or AuthN process.
 After authentication we usually have authorization or AuthZ where we limit access to the application based on who they are (roles, etc.)
 
-Once the user authenticates in the login page, the app sends a cookie to the browser. the browser stores the cookie and sends it in subsequent requests.
-The cookie can only be sent to the API if both the front-end and bac-end are in similar domains.
+Once the user authenticates in the login page, the app sends a cookie to the browser. The browser stores the cookie and sends it in subsequent requests.
+The cookie can only be sent to the API if both the front-end and back-end are in similar domains.
 ![](doc/cookie.png)
 This would tightly couple the front-end and back end. Other front ends could not access the same API.
 This is a problem in MVC because MVC is a server rendered application.
@@ -140,3 +140,26 @@ The best alternative is to use a SPA, if we are using cookies, is to use a singl
 The backend can host a login page. The backend is more than an API now and it becomes the server side application:
 
 ![](doc/cookieSpa.png)
+We included an example in Blazor under the folder cookieSPA. Some notes to pay attention while inspecting the solution: the sever application is referencing the client application. The server application servers the login page. In blazor the sections that require authorization are under the Authorization view.
+
+The server application is a webAPI with an account controller that returns the view to the browser.
+The way to ensure the API handles authentication properly is to decorate the controllers with the Authorize attribute. The authorize attribute can receive as a parameter the authentication scheme (the way we autheticate, key, cookie, etc), if there is more than one.
+
+There is a way to declare the authorize attribute gloaly, via an Authorize filter.
+To disable we can use the [AllowAnonimous] as well.
+While on swagger, we can navigate to the login page, enter credentialsand then go back to swagger because the cookie will be set in the browser already.
+The cookie contains the claims and the rest of the information to create the ClaimsPrincipal object, that is accessible from the controller base API.
+
+# Token authentication and identity
+What about other apps like desktop apps? They do not work with cookies.
+Antoher authenication scheme, Bearer toker scheme, can be used.
+To keep in mind that we can have more than just one authentication scheme.
+The claims information is not sent via the token. When the user logs in, the token is issued.
+Tokens do not need a browser and they are not restricted in the same domain.
+We checked in the web api fundamentals course, we've seen already the bearer token authentication.
+Here we included console app for demonstration purposes. 
+Whem we havr architectures like this tokens become a nightmare to manage:
+
+![](doc/multipleapis.PNG)
+Each api needs to check the token, login, etc
+This is where OAuth2 and OpenIdConnect come into play.

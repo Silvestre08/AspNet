@@ -1,5 +1,4 @@
-﻿using Globomantics.Api;
-using Globomantics.Client.Models;
+﻿using Globomantics.Client.Models;
 using Globomantics.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,9 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Globomantics.Server.Controllers
 {
     [ApiController]
-    [Route("conference")]
-    [Authorize]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [Route("/api/conference")]
     public class ConferenceController : Controller
     {
         private readonly IConferenceRepository _Repo;
@@ -24,6 +21,7 @@ namespace Globomantics.Server.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public IActionResult GetAll()
         {
+            var user = User;
             var conferences = _Repo.GetAll();
             if (conferences == null || !conferences.Any())
             {
@@ -51,6 +49,7 @@ namespace Globomantics.Server.Controllers
         {
             var id = _Repo.Add(model);
             return CreatedAtAction(nameof(GetById), new { id }, model);
+
         }
     }
 }
