@@ -16,6 +16,7 @@ internal static class HostingExtensions
                 .AllowAnyMethod()
         ));
 
+        /// adds all the necessary endpoints to the application that support the authorization flows.
         var isBuilder = builder.Services.AddIdentityServer(options =>
             {
                 options.Events.RaiseErrorEvents = true;

@@ -2,10 +2,7 @@
 
 APIs manage data and or business logic for applications; therefore they are often the heart of an organization!
 As such they need to be protected.
-Our application explained:
-
-Our application is for a fictional company that manages conferences. Speakers send talk proposals.
-Proposals can be added and approved.
+This folder of authentication and authorization has several projects, split by folders, each project demonstrate a differente type of authentication.
 
 # Protecting APIs with keys
 
@@ -13,7 +10,7 @@ The most basic way of protecting APIs is by using a key.
 A key is like a password that must be supplied by the consumer of an API to gain access.
 The consumer is typically another application. An http header is often used to do that. The browser in our api has nothing to do with a key (stored in the API.). It is just used for machine to machine.
 
-Problems
+Problems with API keys
 
 1. Keys can easily be stolen (usually laying around excel sheets, etc.)
 1. Tend to have no expiraltion (hard to revoke when the attacker gets it).
@@ -165,3 +162,95 @@ Each api needs to check the token, login, etc
 This is where OAuth2 and OpenIdConnect come into play.
 
 # OpenId connect and OAuth2
+OAuth2 is an industry standard that uses tokens. It is ideal for distributed applications.
+OAuth2 is a standar that describes the format of an access token and how to obtain it.
+They are not used like the Bearer tokens of the previous section.
+The main difference between the ASP.NET core tokens and OAuth2 tokens is that with OAuth2 there is a third party that provides the token, the *Identity Provider * aka STS (secure token servers).
+
+The identity provider is a service application, a special kind of API in the application whose job is to hand out token to applications that need them.
+There are several token types like access token for APIs and identity tokens for front-ends.
+
+One of the ways to obtain access token is with the *Client Credentials Flow*. This flow is used with Machine to Machine authentication.
+Here is the sequence diagram of the client credentials flow:
+
+![](doc/clientCredentialsFlow.PNG)
+
+To obtain an access token, the client needs to send the ClientId and a Secret (application credentials) to the identity provider.
+These credentials have nothing to do with users.
+Compared to protect the API with api keys, there are several differences:
+1. The access token has a limited lifetime (controlled by the Identity providers)
+1. Multiple APIS can be protected at the same time.
+1. It is protected by encryption.
+
+Let's dig into the solution present in the folder *ClientCreadentialsFlow*
+
+'''
+// here we configure the JWT Bearer token as the default authentication scheme
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.Authority = "https://localhost:5001"; // where the identiy provider is located.
+        o.TokenValidationParameters.ValidateAudience = false; // in case the verification that the token came from the authority is not enoug
+        o.TokenValidationParameters.ValidTypes = new[] { "at+jwt" }; // we only accept JWTs
+    });
+'''
+
+The previous lines of code tell the API to use JWT tokens. Bearer means that every request bearing the token will be granted access.
+The API will only accept tokens that were issued by the defined authority. It is able to do it by verifying cryptographic characteristics present on the token.
+In this scenarion we disabled the audience because the check we do of the tokens authority is enough.
+The token can contain a claim that contains the name of the API the token is meant for. If the audience check is done, the claim is checked agains the configured name of the API.
+This is a microsfot implementation. We disabled it here because this is not part of the Auth2 standard.
+Because this is not the OAuth2 default, the audience claim does not come by default.
+We can do that with a policy instead.
+We need to add security definitions for the Swagger UI:
+
+'''
+builder.Services.AddSwaggerGen(o =>
+{
+    o.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
+        {
+            ClientCredentials = new OpenApiOAuthFlow
+            {   
+                TokenUrl = new Uri("https://localhost:5001/connect/token"), // where tio obtain the token
+                Scopes = new Dictionary<string, string>
+                {
+                    { "globoapi", "Access to Globomantics API" },
+                }
+            },  
+            
+        }
+    });
+    o.AddSecurityRequirement(new OpenApiSecurityRequirement
+    { 
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Id = "oauth2", //The name of the previously defined security scheme.
+                    Type = ReferenceType.SecurityScheme
+                }
+            },new List<string>()
+        }
+    });
+});
+'''
+
+We created our own identiy provider with a framework called identity server. It is free for dev and testing, but paid for productions. Do not implement your owns security solution even if you have to pay for tools like identity server.
+There are alternatives to the identity server like the OpenIdDict.
+Inspecting the code of identity server, we see identity server does not come uo with its own users store. It was created based on a template provided by Duende.
+It has a helper method to add test users.
+What are identity resources and scopes and clients?
+
+```
+   isBuilder.AddInMemoryIdentityResources(Config.IdentityResources);
+   isBuilder.AddInMemoryApiScopes(Config.ApiScopes);
+   isBuilder.AddInMemoryClients(Config.Clients);
+``` 
+
+A scope is a string that represents either a collection of user claims or access to an API.
+The collection of claims is called the *Identity scope*
+The APi scope represents the physical API we want to protect, which in this case it is just ourAPI: lower case is the convention
