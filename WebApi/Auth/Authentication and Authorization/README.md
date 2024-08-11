@@ -253,4 +253,23 @@ What are identity resources and scopes and clients?
 
 A scope is a string that represents either a collection of user claims or access to an API.
 The collection of claims is called the *Identity scope*
-The APi scope represents the physical API we want to protect, which in this case it is just ourAPI: lower case is the convention
+The APi scope represents the physical API we want to protect, which in this case it is just ourAPI: lower case is the convention.
+Client is an applications that wants tokens. See the example of a client:
+```
+new Client[]
+{
+    // m2m client credentials flow client
+    new Client
+    {
+        ClientId = "m2m.client",
+        ClientName = "Client Credentials Client",
+
+        AllowedGrantTypes = GrantTypes.ClientCredentials, // grants are tied to flows. We are granting the client credentials flow to this client.
+        ClientSecrets = { new Secret("511536EF-F270-4058-80CA-1C89C192F69A".Sha256()) }, // not a good idea to have this in source control
+
+        AllowedScopes = { "globoapi" },   // the client is only allowed thi API.
+        
+    },
+}
+    ```
+We can configure the access lifetime of a token here as well.
