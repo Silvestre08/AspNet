@@ -316,3 +316,24 @@ builder.Services.AddClientCredentialsHttpClient("globoapi",
 So on client side we need to know: the location of the identity provider, the client id and secret, the scopes we want to ask, cache the token to not fetch it every time and see if it is still valid (duende nugget is doing that for us). 
 In the service layer, we just use the *IHttpClientFactory*and fetch the client by name.
 Note: check the solution under the folder /ClientCredentialsFlow.
+
+# Inspecting the token
+The token contains the following sections:
+1. the header.
+1. the payload contain the user information, scope and claims.
+1. the signature. The signature is the payload encrypted using a private key.
+The API decrypts it using a public key and verifies that the payload content matches with the signature:
+![](doc/tokenContents.PNG)
+So the token is encoded, not encrypted (besides the signature part).
+This is how an API verifies the contents of the token.
+![](doc/Token%20validation%20steps.PNG)
+
+Asymetric encryption: the use of public/private key pairs for encryption information. Where does the API fetch the public key? The answer lies in the discovery document of Duende, on the jwks link.
+![](doc/public%20key.PNG)
+Keys are typically rotated. The *kid* header in the discovery document is the current key being used. 
+
+# Reference tokens
+JWTs are said to be self contained. All information, including the expiration time, is included in the token itself (no additional request).
+There is no way to revoke the token after it is issued abd before it is expired. 
+Reference tokens solve that. they contain no information they have just an id. The backend will access the introspection endpoint of the identity provider, and it will give back the token with all the information jwt provides, plus if it is still valid (token can be immediatly revoked).
+This is more load on the identiy provider (caching defeats the purpose), so it is recommend only where is the urgent neeed to revoke tokens. Check *ReferenceTokens* folder.
