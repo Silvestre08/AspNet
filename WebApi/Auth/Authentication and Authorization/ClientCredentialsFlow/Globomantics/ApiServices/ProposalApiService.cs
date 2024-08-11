@@ -3,14 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Globomantics.ApiServices
 {
-    [ServiceFilter(typeof(EnsureAccessTokenFilter))]
     public class ProposalApiService : IProposalApiService
     {
         private readonly HttpClient _Client;
 
-        public ProposalApiService(HttpClient client)
+        public ProposalApiService(IHttpClientFactory factory)
         {
-            _Client = client;
+            _Client = factory.CreateClient("globoapi");
         }
 
         public async Task<IEnumerable<ProposalModel>?> GetAll(int conferenceId)

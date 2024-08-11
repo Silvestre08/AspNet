@@ -21,8 +21,7 @@ builder.Services.AddSwaggerGen(o =>
                 {
                     { "globoapi", "Access to Globomantics API" },
                 }
-            },  
-            
+            }
         }
     });
     o.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -42,11 +41,10 @@ builder.Services.AddSwaggerGen(o =>
 builder.Services.AddScoped<IConferenceRepository, ConferenceRepository>();
 builder.Services.AddScoped<IProposalRepository, ProposalRepository>();
 
-// here we configure the JWT Bearer token as the default authentication scheme
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(o =>
     {
-        o.Authority = "https://localhost:5001"; // where the identiy provider is located.
+        o.Authority = "https://localhost:5001";
         o.TokenValidationParameters.ValidateAudience = false;
         o.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
     });

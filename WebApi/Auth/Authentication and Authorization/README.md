@@ -255,6 +255,7 @@ A scope is a string that represents either a collection of user claims or access
 The collection of claims is called the *Identity scope*
 The APi scope represents the physical API we want to protect, which in this case it is just ourAPI: lower case is the convention.
 Client is an applications that wants tokens. See the example of a client:
+
 ```
 new Client[]
 {
@@ -271,5 +272,47 @@ new Client[]
         
     },
 }
-    ```
+```
+
 We can configure the access lifetime of a token here as well.
+Resuming for now:
+1. The client asks the idendity provider for a token.
+1. If the client is authenticated, it sends the token in the fsusequent requests to the API.
+1. The API checks for the token the client is sending and verifies if it is authorize to access the resource.
+
+Let's see how our client app fetchs the token from the identity provider:
+
+```
+builder.Services.AddDistributedMemoryCache();
+
+// duende nugget package token management. it manages the life cycle the token 
+builder.Services.AddClientCredentialsTokenManagement()
+    .AddClient("globoapi.client", client =>
+    {
+        // the token endpoint of duende identity server
+        client.TokenEndpoint = "https://localhost:5001/connect/token";
+
+          // because we are using client credentials flow, the client id and
+         //secret need to be provided.   
+        client.ClientId = "m2m.client";
+        client.ClientSecret = "511536EF-F270-4058-80CA-1C89C192F69A";
+
+
+        client.Scope = "globoapi"
+        // the client also needs to tell what it wants by specifying one or more scopes.
+                                   // This is an API scope. This will result in a token for that API.;
+    });
+
+// http client to perform API requests. Note that we mention the previous client that 
+//fetchs the token. The access token is cached in the asp.netcore distributed memory cache.
+builder.Services.AddClientCredentialsHttpClient("globoapi", 
+    "globoapi.client", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5002");
+});
+
+
+```
+So on client side we need to know: the location of the identity provider, the client id and secret, the scopes we want to ask, cache the token to not fetch it every time and see if it is still valid (duende nugget is doing that for us). 
+In the service layer, we just use the *IHttpClientFactory*and fetch the client by name.
+Note: check the solution under the folder /ClientCredentialsFlow.

@@ -1,4 +1,3 @@
-using Globomantics;
 using Globomantics.ApiServices;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,12 +7,24 @@ builder.Services.AddRazorPages();
 
 builder.Services.AddScoped<IConferenceApiService, ConferenceApiService>();
 builder.Services.AddScoped<IProposalApiService, ProposalApiService>();
-builder.Services.AddScoped<EnsureAccessTokenFilter>();
 
-builder.Services.AddSingleton(sp =>
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddClientCredentialsTokenManagement()
+    .AddClient("globoapi.client", client =>
+    {
+        client.TokenEndpoint = "https://localhost:5001/connect/token";
+
+        client.ClientId = "m2m.client";
+        client.ClientSecret = "511536EF-F270-4058-80CA-1C89C192F69A";
+
+        client.Scope = "globoapi";
+    });
+
+builder.Services.AddClientCredentialsHttpClient("globoapi", 
+    "globoapi.client", client =>
 {
-    var client = new HttpClient { BaseAddress = new Uri("https://localhost:5002") };
-    return client;
+    client.BaseAddress = new Uri("https://localhost:5002");
 });
 
 var app = builder.Build();

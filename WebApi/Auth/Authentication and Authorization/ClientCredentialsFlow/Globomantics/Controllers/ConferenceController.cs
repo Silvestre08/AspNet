@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Globomantics.Controllers;
 
-[ServiceFilter(typeof(EnsureAccessTokenFilter))]
 public class ConferenceController : Controller
 {
     private readonly IConferenceApiService _ApiService;
