@@ -337,3 +337,19 @@ JWTs are said to be self contained. All information, including the expiration ti
 There is no way to revoke the token after it is issued abd before it is expired. 
 Reference tokens solve that. they contain no information they have just an id. The backend will access the introspection endpoint of the identity provider, and it will give back the token with all the information jwt provides, plus if it is still valid (token can be immediatly revoked).
 This is more load on the identiy provider (caching defeats the purpose), so it is recommend only where is the urgent neeed to revoke tokens. Check *ReferenceTokens* folder.
+
+# Using Fron-ends to obtain tokens
+So far we have seen the client credentials flow suitable for machine to machine. 
+When there is a user involved we need to implement the Authorization Code Flow.
+It is the identity provider that has the login screen and the user store.
+When the user logs in, the identity provider will send tokens to the front-end:
+1. Acces token, meant for APIs
+1. Identity token that contains the claims, personal information.
+
+When using a SPA we always need a component that lives on the server that suports the login. This pattern is called BFF: Back-end for Front-end.
+
+The identity token is described in an addon to the OAuth2 standards. OAuth2 is only about access tokens. When identity tokens are involved, the standar is called OpenID Connect:
+
+![](doc/openIdConnect.PNG)
+
+The login page is on the Duende csproj. It can be customized.
