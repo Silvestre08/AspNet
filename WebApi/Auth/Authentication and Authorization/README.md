@@ -147,13 +147,14 @@ While on swagger, we can navigate to the login page, enter credentialsand then g
 The cookie contains the claims and the rest of the information to create the ClaimsPrincipal object, that is accessible from the controller base API.
 
 # Token authentication and identity
+
 What about other apps like desktop apps? They do not work with cookies.
 Antoher authenication scheme, Bearer toker scheme, can be used.
 To keep in mind that we can have more than just one authentication scheme.
 The claims information is now sent via the token. When the user logs in, the token is issued.
 Tokens do not need a browser and they are not restricted to the same domain.
 We checked in the web api fundamentals course, we've seen already the bearer token authentication.
-In asp.net core 8, it was introduced ASP.COre identity, that comes with EF core out of the box solution to manage users, roles, etc. 
+In asp.net core 8, it was introduced ASP.COre identity, that comes with EF core out of the box solution to manage users, roles, etc.
 Whem we have architectures like this tokens become a nightmare to manage:
 
 ![](doc/multipleapis.PNG)
@@ -161,15 +162,16 @@ Each api needs to check the token, login, etc
 This is where OAuth2 and OpenIdConnect come into play.
 
 # OpenId connect and OAuth2
+
 OAuth2 is an industry standard that uses tokens. It is ideal for distributed applications.
 OAuth2 is a standard that describes the format of an access token and how to obtain it.
 They are not used like the Bearer tokens of the previous section.
-The main difference between the ASP.NET core tokens and OAuth2 tokens is that with OAuth2 there is a third party that provides the token, called the *Identity Provider * aka STS (secure token servers).
+The main difference between the ASP.NET core tokens and OAuth2 tokens is that with OAuth2 there is a third party that provides the token, called the _Identity Provider _ aka STS (secure token servers).
 
 The identity provider is a service application, a special kind of API in the application whose job is to hand out token to applications that need them.
 There are several token types like access token for APIs and identity tokens for front-ends.
 
-One of the ways to obtain access token is with the *Client Credentials Flow*. This flow is used with Machine to Machine authentication.
+One of the ways to obtain access token is with the _Client Credentials Flow_. This flow is used with Machine to Machine authentication.
 Here is the sequence diagram of the client credentials flow:
 
 ![](doc/clientCredentialsFlow.PNG)
@@ -177,21 +179,22 @@ Here is the sequence diagram of the client credentials flow:
 To obtain an access token, the client needs to send the ClientId and a Secret (application credentials) to the identity provider.
 These credentials have nothing to do with users.
 Compared to protect the API with api keys, there are several differences:
+
 1. The access token has a limited lifetime (controlled by the Identity providers)
 1. Multiple APIS can be protected at the same time.
 1. It is protected by encryption.
 
-Let's dig into the solution present in the folder *ClientCreadentialsFlow*
+Let's dig into the solution present in the folder _ClientCreadentialsFlow_
 
 '''
 // here we configure the JWT Bearer token as the default authentication scheme
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o =>
-    {
-        o.Authority = "https://localhost:5001"; // where the identiy provider is located.
-        o.TokenValidationParameters.ValidateAudience = false; // in case the verification that the token came from the authority is not enough
-        o.TokenValidationParameters.ValidTypes = new[] { "at+jwt" }; // we only accept JWTs
-    });
+.AddJwtBearer(o =>
+{
+o.Authority = "https://localhost:5001"; // where the identiy provider is located.
+o.TokenValidationParameters.ValidateAudience = false; // in case the verification that the token came from the authority is not enough
+o.TokenValidationParameters.ValidTypes = new[] { "at+jwt" }; // we only accept JWTs
+});
 '''
 
 The previous lines of code tell the API to use JWT tokens. Bearer means that every request bearing the token will be granted access.
@@ -206,24 +209,24 @@ We need to add security definitions for the Swagger UI:
 '''
 builder.Services.AddSwaggerGen(o =>
 {
-    o.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.OAuth2,
-        Flows = new OpenApiOAuthFlows
-        {
-            ClientCredentials = new OpenApiOAuthFlow
-            {   
-                TokenUrl = new Uri("https://localhost:5001/connect/token"), // where tio obtain the token
-                Scopes = new Dictionary<string, string>
-                {
-                    { "globoapi", "Access to Globomantics API" },
-                }
-            },  
-            
+o.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
+{
+Type = SecuritySchemeType.OAuth2,
+Flows = new OpenApiOAuthFlows
+{
+ClientCredentials = new OpenApiOAuthFlow
+{  
+ TokenUrl = new Uri("https://localhost:5001/connect/token"), // where tio obtain the token
+Scopes = new Dictionary<string, string>
+{
+{ "globoapi", "Access to Globomantics API" },
+}
+},
+
         }
     });
     o.AddSecurityRequirement(new OpenApiSecurityRequirement
-    { 
+    {
         {
             new OpenApiSecurityScheme
             {
@@ -235,6 +238,7 @@ builder.Services.AddSwaggerGen(o =>
             },new List<string>()
         }
     });
+
 });
 '''
 
@@ -248,10 +252,10 @@ What are identity resources and scopes and clients?
    isBuilder.AddInMemoryIdentityResources(Config.IdentityResources);
    isBuilder.AddInMemoryApiScopes(Config.ApiScopes);
    isBuilder.AddInMemoryClients(Config.Clients);
-``` 
+```
 
 A scope is a string that represents either a collection of user claims or access to an API.
-The collection of claims is called the *Identity scope*
+The collection of claims is called the _Identity scope_
 The APi scope represents the physical API we want to protect, which in this case it is just our API: lower case is the convention.
 Client is an applications that wants tokens. See the example of a client:
 
@@ -268,13 +272,14 @@ new Client[]
         ClientSecrets = { new Secret("511536EF-F270-4058-80CA-1C89C192F69A".Sha256()) }, // not a good idea to have this in source control
 
         AllowedScopes = { "globoapi" },   // the client is only allowed thi API.
-        
+
     },
 }
 ```
 
 We can configure the access lifetime of a token here as well.
 Resuming for now:
+
 1. The client asks the idendity provider for a token.
 1. If the client is authenticated, it sends the token in the subsequent requests to the API.
 1. The API checks for the token the client is sending and verifies if it is authorized to access the resource.
@@ -284,7 +289,7 @@ Let's see how our client app fetchs the token from the identity provider:
 ```
 builder.Services.AddDistributedMemoryCache();
 
-// duende nugget package token management. it manages the life cycle the token 
+// duende nugget package token management. it manages the life cycle the token
 builder.Services.AddClientCredentialsTokenManagement()
     .AddClient("globoapi.client", client =>
     {
@@ -292,7 +297,7 @@ builder.Services.AddClientCredentialsTokenManagement()
         client.TokenEndpoint = "https://localhost:5001/connect/token";
 
           // because we are using client credentials flow, the client id and
-         //secret need to be provided.   
+         //secret need to be provided.
         client.ClientId = "m2m.client";
         client.ClientSecret = "511536EF-F270-4058-80CA-1C89C192F69A";
 
@@ -302,9 +307,9 @@ builder.Services.AddClientCredentialsTokenManagement()
                                    // This is an API scope. This will result in a token for that API.;
     });
 
-// http client to perform API requests. Note that we mention the previous client that 
+// http client to perform API requests. Note that we mention the previous client that
 //fetchs the token. The access token is cached in the asp.netcore distributed memory cache.
-builder.Services.AddClientCredentialsHttpClient("globoapi", 
+builder.Services.AddClientCredentialsHttpClient("globoapi",
     "globoapi.client", client =>
 {
     client.BaseAddress = new Uri("https://localhost:5002");
@@ -312,36 +317,42 @@ builder.Services.AddClientCredentialsHttpClient("globoapi",
 
 
 ```
-So on client side we need to know: the location of the identity provider, the client id and secret, the scopes we want to ask, cache the token to not fetch it every time and see if it is still valid (duende nugget is doing that for us). 
+
+So on client side we need to know: the location of the identity provider, the client id and secret, the scopes we want to ask, cache the token to not fetch it every time and see if it is still valid (duende nugget is doing that for us).
 In the service layer, we just use the *IHttpClientFactory*and fetch the client by name.
 Note: check the solution under the folder /ClientCredentialsFlow.
 
 # Inspecting the token
+
 The token contains the following sections:
+
 1. the header.
 1. the payload contain the user information, scope and claims.
 1. the signature. The signature is the payload encrypted using a private key.
-The API decrypts it using a public key and verifies that the payload content matches with the signature:
-![](doc/tokenContents.PNG)
-So the token is encoded, not encrypted (besides the signature part).
-This is how an API verifies the contents of the token.
-![](doc/Token%20validation%20steps.PNG)
+   The API decrypts it using a public key and verifies that the payload content matches with the signature:
+   ![](doc/tokenContents.PNG)
+   So the token is encoded, not encrypted (besides the signature part).
+   This is how an API verifies the contents of the token.
+   ![](doc/Token%20validation%20steps.PNG)
 
 Asymetric encryption: the use of public/private key pairs for encryption information. Where does the API fetch the public key? The answer lies in the discovery document of Duende, on the jwks link.
 ![](doc/public%20key.PNG)
-Keys are typically rotated. The *kid* header in the discovery document is the current key being used. 
+Keys are typically rotated. The _kid_ header in the discovery document is the current key being used.
 
 # Reference tokens
+
 JWTs are said to be self contained. All information, including the expiration time, is included in the token itself (no additional request).
-There is no way to revoke the token after it is issued abd before it is expired. 
+There is no way to revoke the token after it is issued abd before it is expired.
 Reference tokens solve that. they contain no information they have just an id. The backend will access the introspection endpoint of the identity provider, and it will give back the token with all the information jwt provides, plus if it is still valid (token can be immediatly revoked).
-This is more load on the identiy provider (caching defeats the purpose), so it is recommend only where is the urgent neeed to revoke tokens. Check *ReferenceTokens* folder.
+This is more load on the identiy provider (caching defeats the purpose), so it is recommend only where is the urgent neeed to revoke tokens. Check _ReferenceTokens_ folder.
 
 # Using Fron-ends to obtain tokens
-So far we have seen the client credentials flow suitable for machine to machine. 
-When there is a user involved, we need to implement the *Authorization Code Flow*.
+
+So far we have seen the client credentials flow suitable for machine to machine.
+When there is a user involved, we need to implement the _Authorization Code Flow_.
 It is the identity provider that has the login screen and the user store.
 When the user logs in, the identity provider will send tokens to the front-end:
+
 1. Access token, meant for APIs
 1. Identity token that contains the claims, personal information.
 
@@ -353,7 +364,7 @@ The identity token is described in an addon to the OAuth2 standards. OAuth2 is o
 
 The login page is on the Duende csproj. It can be customized.
 What we were protecting so far, with the client credentials flow, was the API. The controllers of the MVC app were not protected. But now we can.
-On the *Authorization Code Flow* solution, the API uses JwtBearer tokens:
+On the _Authorization Code Flow_ solution, the API uses JwtBearer tokens:
 
 ```
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -366,6 +377,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 ```
 
 On the identity provider side, we added a new type of client, interactive:
+
 ```
             // interactive client using code flow + pkce
             new Client
@@ -390,11 +402,97 @@ On the identity provider side, we added a new type of client, interactive:
                     new ClientClaim("clienttype", "interactive")
                 },
 
-                // api and identity tokens. Profile is a collection of user claims. 
+                // api and identity tokens. Profile is a collection of user claims. The claims can also be sent with access token
                 AllowedScopes = { "openid", "profile", "globoapi_fullaccess" },
             },
 ```
 
- The Grant type is code, meaning authorization code flow. 
+The Grant type is code, meaning authorization code flow.
+On the client side, MVC APP we need to configure the OpenIdConnect.
+This allows us to protect the front-end with the backend as well. Let's check the front end code:
 
- On the client side, MVC APP we need to configure the OpenIdConnect.
+```
+builder.Services.AddAuthentication(o =>
+{
+   o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+   o.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+})
+   // 2 authentication schemes: cookies and open id connect
+   // open id connect authentication is only used once, when the user is not authenticated.
+   // for subsequent requests, an identity cookie will be sent to the MVC app to identify the user. That is why the challenging scheme is the openIDConnect and the default scheme is cookie
+   .AddCookie(o => o.Events.OnSigningOut =
+   // revoke the refresh token when the user signs out
+       async e => await e.HttpContext.RevokeRefreshTokenAsync())
+
+   .AddOpenIdConnect(options =>
+   {
+       options.Authority = "https://localhost:5001";
+
+       options.ClientId = "interactive";
+       //Store in application secrets
+       options.ClientSecret = "49C1A7E1-0C79-4A89-A3D6-A37998FB86B0";
+       options.Scope.Clear();
+       options.Scope.Add("openid"); // scopes to request.
+       options.Scope.Add("profile");
+       options.Scope.Add("globoapi_fullaccess");
+       options.Scope.Add("offline_access");
+
+       options.ResponseType = "code"; // authorization code flow
+       options.GetClaimsFromUserInfoEndpoint = true;
+       options.SaveTokens = true; // MVC app can access the cookie and read ii
+
+       options.Events = new OpenIdConnectEvents
+       {
+           OnTokenResponseReceived = r =>
+           {
+               var accessToken = r.TokenEndpointResponse.AccessToken;
+               return Task.CompletedTask;
+           }
+       };
+
+   });
+```
+
+To read the access token we can fetch from the http context. The access token will not contain user info and claims as well because we asked for those scopes, unlike in the client credentials flow.
+The API will not reject the token immediatly after it expires because there is a grace period built in, in the ClockSkew property with default being 5 minutes:
+
+```
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.Authority = "https://localhost:5001";
+        o.TokenValidationParameters.ValidateAudience = false;
+        o.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+        o.TokenValidationParameters.ClockSkew = 10
+    });
+```
+
+# Refresh Tokens
+
+With the client credentials flow it is an easy task. Refresh tokens are part of OAuth2 standard, so the users do not enter the credentials again. It only works if the client asks for the scope _offline_access_
+The identity provider needs also to be configured to allow such scope.
+When the token expires, the client can send the refresh token to a special endpoint on the identiy provider to get a new access token back:
+
+![](doc/refreshToken.png)
+
+The cycle can go on until the refresh token expires.
+The identiy provider needs to be configured as well:
+
+```
+                AllowOfflineAccess = true,
+                AbsoluteRefreshTokenLifetime = 2592000, // 30 days
+                SlidingRefreshTokenLifetime = 1209600, // 14 days
+```
+
+We can see the absolute time and sliding time. What does this mean? This mean the access token will bre refreshed after 14 days, then 14 days after but then 2 days. After the 30 days the user needs to login again.
+Identity providers have the ability to revoke the refresh token, so if its stolen, we can prevent further damage.
+We can include claims at the resource lelvel (will be sent always) and at the scope level. At the scope level, the claims are only included in the token when the specific scope is requested.
+We can also add individual client claims.
+
+# Authorization
+
+Authorization does not have to come from access tokens only: it can come from cookies or external API.
+Authorization is ultimately done on the client, that receives the token. Once authentication is done, the identity provider is done too.
+How does the API checks the token was meant for the API and just not bluntly receives it? We need to check for the audience claim. If the audience is not present, we check the scopes.
+On the controller level we have a _User_ of type _ClaimsPrincipal_ that has ClaimsIdentity that correspond to the authentication schemes, that have the claims.
+To not check on every request the existence of claims we can create global polocies.
