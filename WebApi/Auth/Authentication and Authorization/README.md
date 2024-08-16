@@ -495,4 +495,121 @@ Authorization does not have to come from access tokens only: it can come from co
 Authorization is ultimately done on the client, that receives the token. Once authentication is done, the identity provider is done too.
 How does the API checks the token was meant for the API and just not bluntly receives it? We need to check for the audience claim. If the audience is not present, we check the scopes.
 On the controller level we have a _User_ of type _ClaimsPrincipal_ that has ClaimsIdentity that correspond to the authentication schemes, that have the claims.
-To not check on every request the existence of claims we can create global polocies.
+To not check on every request the existence of claims we can create global policies and centralize authorization.
+Policies together with the authorization attributes can be used at controllers and controller actions.
+This is the program.cs of the API:
+
+```
+builder.Services.AddAuthorization(o =>
+{
+    o.AddPolicy("fullaccess", p =>
+        p.RequireClaim(JwtClaimTypes.Scope, "globoapi_full"));
+    o.AddPolicy("isadmin", p =>
+        p.RequireClaim(JwtClaimTypes.Role, "admin"));
+    o.AddPolicy("isemployee", p =>
+        p.RequireClaim("employeeno"));
+
+    o.AddPolicy("rolewithfallback", p =>
+        p.RequireAssertion(c =>
+        {
+            var roleClaim = c.User.FindFirst(JwtClaimTypes.Role);
+            return (roleClaim == null || roleClaim.Value == "admin");
+        })
+    );
+
+    //o.DefaultPolicy = new AuthorizationPolicyBuilder()
+    //    .RequireClaim(JwtClaimTypes.Role, "contributor")
+    //    .RequireAuthenticatedUser()
+    //    .Build();
+    // we can have default policies and fallback policies.
+});
+```
+
+Now, at the controoler level:
+
+```
+
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [Authorize(Policy = "fullaccess")] // only tokens obeying this policy can access this method
+        public IActionResult GetAll()
+        {
+            var conferences = _Repo.GetAll();
+            if (conferences == null || !conferences.Any())
+            {
+                return NoContent();
+            }
+            return Ok(conferences);
+        }
+```
+
+We can also specify roles and usernames.
+To apply policies globay we can use the Authorize filter:
+
+```
+builder.Services.AddControllers(o =>
+    o.Filters.Add(new AuthorizeFilter("fullaccess"))); // good place to check if the token was meant for this api if not using audience.
+```
+
+# Authorization considerations
+
+It is recommended to use socpes because no matter the flow we use, these will be available. In production scenarios we might have multiple APIs talking to our API (using client credentials) as well as severall different frontends (using authorization code).
+The scopes are configured in the identity provider. Identity providers determine which client gets which scopes.
+We need to be carefull while setting policies to not let unfiltered data get to clients
+If we need complex policies the require dependency injection we can look at requirements and handlers.
+We can also add an authorization API if our needs get too big. It would look like this:
+![](doc/AuthorizationAPI.png)
+this is called poor mans delegation.
+The last example in the _AuthorizationService_ folder does that. We created a seperate API for authorization. We need then an Authorization service at our api level, so we need dependency injection for that. We can do that with requirements and handlers:
+
+1. A handler executes the actual policy
+1. Requirement is input for the handler.
+   It is typical a class with properties the handler uses:
+
+```
+    public class IsInRoleRequirement: IAuthorizationRequirement
+    {
+        public string Role { get; set; }
+        public int ApplicationId { get; set; }
+    }
+```
+
+The handler:
+
+```
+    public class IsInRoleHandler: AuthorizationHandler<IsInRoleRequirement>
+    {
+        private readonly IAuthorizationApiService _AuthorizationApiService;
+
+        public IsInRoleHandler(IAuthorizationApiService authorizationApiService)
+        {
+            _AuthorizationApiService = authorizationApiService;
+        }
+
+        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+            IsInRoleRequirement requirement)
+        {
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            var permissions = await _AuthorizationApiService
+                .GetPermissions(int.Parse(userId), requirement.ApplicationId);
+
+            if (permissions.Role == requirement.Role)
+                context.Succeed(requirement);
+        }
+    }
+```
+
+Now defining the policy in _Program.cs_:
+
+```
+builder.Services.AddAuthorization(o =>
+{
+    o.AddPolicy("isAdmin", p =>
+        p.AddRequirements(new IsInRoleRequirement { Role = "admin", ApplicationId = 1 }));
+});
+
+builder.Services.AddScoped<IAuthorizationHandler, IsInRoleHandler>();
+```
+
+Extension grants can be used to simplify the architecture. Out of the scope of this course.
