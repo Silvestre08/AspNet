@@ -69,6 +69,6 @@ The authorization code  is a short-lived single use credential, used to verify t
 Tokens are returned from the token endpoint.
 Because public clients cannot safely store their credentials, long lived access is restricted.
 Consensus is owards moving away from handling security at the client in favor of the server (BFF pattern).
-Choosing the wrong flow may open security holes.
+Choosing the wrong flow may open security holes. Or wrong decisions on a flow (how to deliver tokens, etc)
 
 What is a good idea, changes over time. Security changes fast and we should keep up with it. And, a lot of approaches can work and most are not a good idea.
