@@ -113,3 +113,86 @@ When we start the project we do not see much (no user interface yet). But we lau
 We can the the config in the conventional well-known endpoint: https://localhost:5001/.well-known/openid-configuration
 This endpoint lists supported scopes and related claims and more information. This is the endpoint, its config, that is read by other pieces of middleware to check where the enpoints can be found.
 Tokens need to be signed and for that keys are needed. Identity server generates that on the fly. When going into production we want to replace that by something more persistent like a certificate.
+
+## Add ui and users
+Navigating to our identity provider project, we can call the dotnet new isui to add the ui template from duende. It adds razor pages into the project. 
+We need to add related services to the IoC container but after this step, when we launch the application, we see the following ui:
+![](doc/duendeui.PNG)
+
+When we added the ui samples, a list of test users was automatically created for us.
+A test user has a subject ID, that should be unique at the Identity provider level.
+A test user also comes with a few claims.
+Claims are information about the user: name, family names, etc.
+Claims are related to scopes. 
+Like we have seen, we are using the open id scope. So anytime a client requests the open id scope the user identifier claim is returned.
+In order to return to a client claims like the name, they need to request the Progile scope. We need to add it to the identiy resource list:
+
+'''
+    public static IEnumerable<IdentityResource> IdentityResources =>
+        new IdentityResource[]
+        { 
+            new IdentityResources.OpenId(),
+            new IdentityResources.Profile()
+        };
+'''
+So OpendIdConnect has a few standardized claims. So far we mentioned openid and profile:
+|[](doc/profileopenidclaims.PNG)
+
+There are more standard scope/claims mapping. Scope phone maps to phone_number, prhone_number_verified, etc. We can add our scopes as well.
+
+## Authorization code flow
+Autorhization code flow is the advised flow, with PKCE protection. First lets implement without PKCE.
+All flows start with a request to the authorization endpoint. This is a simple redirection to a URI at the level of the identiy provider.
+Lets see an example of such request uri:
+![](doc/authorizationedpoint.PNG)
+
+The redirect_uri is the URI of the client application where the response of the request is going to be delivered to.
+We also see the scopes. We ask for the profile scope.
+Response type on that request determines the flow that is used:
+![](doc/responseTypes.PNG)
+
+A response type of code means that we are going to use authorization code flow and at the same time that authorization is returned to the type via browser redirection.
+
+![](doc/authorizationcodeflow.PNG)
+
+First, the client send a request to the Authorization endpoint, with response type code and other parameters like scopes. 
+At the IDP the user autheticaticates: the idp can ask the user for consent. 
+At this point the client app does not know who the user is, but the idp does.
+The IDP sends us back to the client application via redirection or form post.
+It sends the authorization code, the response we asked for.
+This code is delivered via the URI, that is called front channel communication (visible to the browser).
+After that, the client asks the token endpoint through the back channel (does not use redirection and thus is not visible to the browser). This is a server to server http request (might not apply to static apps living in the browser TO CHECK because this is MVCC APP). 
+The client sends to the token endpoint the authorization code, and other information like client id and secret. At the client, token is validated.
+After the token is validated, the client application knows who the user is. There are libraries that do the validation for us.
+Onm our case, the distinction between fron-channel and back-channel communication:
+![](doc/fronchannel.PNG)
+
+### Loging in with Authorization code flow
+1. The first step is to configure a client that will represent our application at the IDP level:
+```
+ new Client[] 
+     { new Client { ClientName = "Image Gallery" , 
+         ClientId = "imagegalleryclient", // client app identifier
+         AllowedGrantTypes = GrantTypes.Code, // authorization code flow
+         RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri  - signin oidc is the default but it can be configured
+         AllowedScopes = 
+         { 
+             IdentityServerConstants.StandardScopes.OpenId,
+             IdentityServerConstants.StandardScopes.Profile
+         },
+         ClientSecrets = { new Secret("secret".Sha256()) }
+     } };
+```
+2. On our client application because it is a mvc app, first download Microsoft.AspNetCore.Authentication.OpenIdConnect 
+3. Configure the client request pipeline: 
+```
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme); 
+
+```
+We configured cookie as a default authentication scheme. This means that once we have an identity token, that is validated and transformed into identity claims, it will be stored in an encrypted cookie.
+In subsequent request, the cookie will be sent and it is this cookie our app is going to check to validate authenticated requests.
