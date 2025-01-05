@@ -22,6 +22,7 @@ public static class Config
                 ClientId = "imagegalleryclient", // client app identifier
                 AllowedGrantTypes = GrantTypes.Code, // authorization code flow
                 RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
+                PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
                 AllowedScopes = 
                 { 
                     IdentityServerConstants.StandardScopes.OpenId,

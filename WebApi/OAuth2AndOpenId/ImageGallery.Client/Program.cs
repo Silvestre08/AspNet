@@ -36,6 +36,7 @@ builder.Services.AddAuthentication(options =>
     //options.Scope.Add("profile");
     //options.CallbackPath = new PathString("signin-oidc");
     options.SaveTokens = true; // configure middleware to save tokens it receives
+    options.GetClaimsFromUserInfoEndpoint = true;
 }); 
 
 var app = builder.Build();
