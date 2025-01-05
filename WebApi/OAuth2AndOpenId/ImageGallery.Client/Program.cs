@@ -34,7 +34,7 @@ builder.Services.AddAuthentication(options =>
     // these scopes are automatically requested by the middleware
     //options.Scope.Add("openid");
     //options.Scope.Add("profile");
-    options.CallbackPath = new PathString("signin-oidc");
+    //options.CallbackPath = new PathString("signin-oidc");
     options.SaveTokens = true; // configure middleware to save tokens it receives
 }); 
 

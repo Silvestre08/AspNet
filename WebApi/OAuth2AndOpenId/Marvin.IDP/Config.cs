@@ -27,6 +27,10 @@ public static class Config
                     IdentityServerConstants.StandardScopes.OpenId,
                     IdentityServerConstants.StandardScopes.Profile
                 },
-                ClientSecrets = { new Secret("secret".Sha256()) }
-            } };
+                ClientSecrets = { new Secret("secret".Sha256()) },
+                RequireConsent = true,
+                
+            }
+
+            };
 }
