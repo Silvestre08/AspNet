@@ -341,4 +341,41 @@ To get the middleware of out MVc app to call the user infor endpoint is a matter
 If we inspect the token we do not see the claims but if we see the output of our mvc app and the idp, we can verify that there were requests to the user info endpoint and we can verify the information:
 ![](doc/claimsidentity.png)
 
-Lets inspect the identity token and see what its fields mean.
+Let's inspect the identity token and see what its fields mean.
+The format of an identity token is JWT:
+![](doc/identityTokendecripted.png)
+
+1. The sub is the user identifier or "subject". it is always returned when used openidconnect.
+2. Iss means the issuer of the idenity token: URI of the identity provider.
+3. aud stands for audience, the audience for this token. In our case the client application.
+4. The nexrt four items represnet the seconds passed since January first 1970. Iat issued at. exp: expiration of the token.
+5. amr: authentication methods used.
+   ![](doc/identityTokendecripted2.png)
+   This can have other values like a one time password or a multi-factor authentication.
+6. nonce: number only used once. Generated at client level and it is sent back ffrom the IDP. It can be checked during token validation and helps prevent cross-site request forgery attacks.
+7. at_hash is a number used to link an access token to this specific identity token
+
+Depending on the idp used, extra claims can come with the identity token
+
+## Working with claims
+
+The identity claims allows us to show specific information in the web app. They are also important for authorization.
+To make sure the claim types stay the same as they come from the identity provider, we can add this in the program.cs:
+
+```
+JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+```
+
+The middleware of openidconnect filter out some claims before creating the claims idenity and storing it in a cookie. Most likely claims that are not that useful. We are allowed to get the claims we want and get rid of the ones that are not necessary (keep the cookie smaller as it can be). See the example of how to configure the middleware to not filter out the audience claim, and to remove a claim from the claims identity:
+
+```
+// done in addOpenIdConnect method
+options.ClaimActions.Remove("aud"); // remove a filter
+  options.ClaimActions.DeleteClaim("idp");
+```
+
+## Rbac
+
+So far we have seen authentication: the process to determine who a user is. Lets dive into authorization: the process of determining what a user is allowed to do.
+One way to do that is use Role-Base access control. A role has a set of permissions that tell us what a user is/is not allowed to do.
+There is also another way like attribute based access control (preferred over rbac and to see later).
