@@ -43,6 +43,12 @@ builder.Services.AddAuthentication(options =>
     options.GetClaimsFromUserInfoEndpoint = true;
     options.ClaimActions.Remove("aud");
     options.ClaimActions.DeleteClaim("sid");
+    options.Scope.Add("roles");
+    options.ClaimActions.MapJsonKey("role", "role");
+    options.TokenValidationParameters = new()
+    {
+        NameClaimType =  
+    };
 }); 
 
 var app = builder.Build();
