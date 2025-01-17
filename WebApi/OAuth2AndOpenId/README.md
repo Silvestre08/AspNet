@@ -400,3 +400,24 @@ To enable RBAC we need:
 options.Scope.Add("roles");
     options.ClaimActions.MapJsonKey("role", "role");
 ```
+5. Configure the token validation parameters. When we ask for the user name and role these will be the claims we will look at
+```
+    options.TokenValidationParameters = new()
+    {
+        NameClaimType =  "given_name", // these are the claims coming in the token
+        RoleClaimType = "role"
+
+    };
+
+```
+6. On the layout html check if the role is Paying user. Only payin users can add an image:
+```
+      @if (User.IsInRole("PayingUser"))
+  {
+
+      <li class="nav-item">
+          <a class="nav-link text-dark" asp-area="" asp-controller="Gallery" asp-action="AddImage">Add an Image</a>
+      </li>
+
+  }
+```

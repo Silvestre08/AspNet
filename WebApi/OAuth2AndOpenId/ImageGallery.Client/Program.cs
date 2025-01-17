@@ -47,7 +47,9 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.MapJsonKey("role", "role");
     options.TokenValidationParameters = new()
     {
-        NameClaimType =  
+        NameClaimType =  "given_name",
+        RoleClaimType = "role"
+
     };
 }); 
 
