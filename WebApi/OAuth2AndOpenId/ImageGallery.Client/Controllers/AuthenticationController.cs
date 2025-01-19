@@ -19,6 +19,12 @@ namespace ImageGallery.Client.Controllers
             // OpenIdConnectDefaults.AuthenticationScheme so it clears the session
             await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
         }
+
+        // returns a view access denied
+        public IActionResult AccessDenied() 
+        {
+            return View();
+        }
   
     }
 }
