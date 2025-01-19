@@ -431,3 +431,18 @@ options.Scope.Add("roles");
 
   }
 ```
+This only guraties that the user that is not in that role does not see the page. But the user could navigate to it by manipulating the URL. So we have to block the access to our controllers:
+```
+        [Authorize(Roles = "PayingUser")]
+        public IActionResult AddImage()
+        {
+            return View();
+        }
+```
+7. Add access denied page :
+```
+(
+{
+    options.AccessDeniedPath = "/Authentication/AccessDenied"; // path of the access denied page
+});
+```
