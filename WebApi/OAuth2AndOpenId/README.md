@@ -378,4 +378,56 @@ options.ClaimActions.Remove("aud"); // remove a filter
 
 So far we have seen authentication: the process to determine who a user is. Lets dive into authorization: the process of determining what a user is allowed to do.
 One way to do that is use Role-Base access control. A role has a set of permissions that tell us what a user is/is not allowed to do.
-There is also another way like attribute based access control ABAC aka PBAC (preferred over rbac and to see later).
+There is also another way like attribute based access control (preferred over rbac and to see later).
+To enable RBAC we need:
+
+1. define new claim "role" and add to test users
+2. Add a new identity resource. Role scope is not standard of OpendIdConnect. So when a client asks for this scope, the defined claims for this scope need to be returned.
+
+```
+
+            new IdentityResource("roles", "Your role(s)", new [] { "roles" }),
+```
+
+3. Add roles to the allowed scope list of the client application:
+
+```
+  AllowedScopes =
+  {
+      IdentityServerConstants.StandardScopes.OpenId,
+      IdentityServerConstants.StandardScopes.Profile,
+      "roles",
+  },
+```
+
+4. On the client app ask for this additional scope and appkly the mapping from the claim to the claims identity:
+
+```
+options.Scope.Add("roles");
+    options.ClaimActions.MapJsonKey("role", "role");
+```
+
+5. Configure the token validation parameters. When we ask for the user name and role these will be the claims we will look at
+
+```
+    options.TokenValidationParameters = new()
+    {
+        NameClaimType =  "given_name", // these are the claims coming in the token
+        RoleClaimType = "role"
+
+    };
+
+```
+
+6. On the layout html check if the role is Paying user. Only payin users can add an image:
+
+```
+      @if (User.IsInRole("PayingUser"))
+  {
+
+      <li class="nav-item">
+          <a class="nav-link text-dark" asp-area="" asp-controller="Gallery" asp-action="AddImage">Add an Image</a>
+      </li>
+
+  }
+```
