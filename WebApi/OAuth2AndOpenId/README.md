@@ -378,4 +378,4 @@ options.ClaimActions.Remove("aud"); // remove a filter
 
 So far we have seen authentication: the process to determine who a user is. Lets dive into authorization: the process of determining what a user is allowed to do.
 One way to do that is use Role-Base access control. A role has a set of permissions that tell us what a user is/is not allowed to do.
-There is also another way like attribute based access control (preferred over rbac and to see later).
+There is also another way like attribute based access control ABAC aka PBAC (preferred over rbac and to see later).
