@@ -13,11 +13,11 @@ The profile dictates the url the application runs on and the port.
 
 ## Solution structure
 
-_AppSettings.json_ contains application settings with some default configuration, like logging. 
+_AppSettings.json_ contains application settings with some default configuration, like logging.
 By default, it also create AppSettings.Development.json that allows us to override some default settings just for our development environment.
 We have a Controllers folder with a default controller (it is related with the MVC architecture).
 CityInfo.API.http can be removed. It is used to test the api from visual studio but we can do that with postman.
-We elaborate more on this file on the testing section. 
+We elaborate more on this file on the testing section.
 Program.cs contains the startup the application, in this case a web application that needs to be hosted.
 The builder can be used for that. It is here that dependency injection gets configured as well.
 The last section configures the API middlewares.
@@ -67,7 +67,7 @@ By calling MapControllers no conventions are applied and we can just use attribu
 ![](doc/attribute%20routing.png)
 
 The Route attribute can be applied at the controller level class, which defines a base route to the controller itself and avoids some repetition on all actions.
-If we use [Route("api/[Controller]")] we basically map the url to the controller name. In our case the cities controller will have the url *.../api/cities*.
+If we use [Route("api/[Controller]")] we basically map the url to the controller name. In our case the cities controller will have the url _.../api/cities_.
 Be careful with this approach because renaming the controller would change the route and clients dependent on it would break.
 Each controller action can have more specific URL parts and parameters. Parameters are used in atributtes with curly braces: "{cityId}"
 
@@ -320,16 +320,16 @@ More often that not, we won't need to write our own token generation service. At
 This can be challenging during development to integrate with identity providers. For that, microsoft create user-jwts
 If we run the create command on project directory the donet cli scans through the launchSettings.json file and generate audience information, etc..
 We can specify those parameters to the command:
-_dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi_
+_dotnet user-jwts create --issuer https://localhost:7127 --audience cityinfoapi_
 
 this command creates a token for the specified issuer and audience. We also need to check which key the donet user-jwts is using by running:
 
-_dotnet user-jwts key --issuer https://localhost:7169_
+_dotnet user-jwts key --issuer https://localhost:7127_
 
 The key is related to the issuer. The cli will give us the key that we can copy to the appSettings.Dev and continue to test the API.
 
 Further command combinations are possible: we can specify claims for the token as well, so that we can test authorization polocies:
-dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi --claim "city=Antwerp"
+dotnet user-jwts create --issuer https://localhost:7127 --audience cityinfoapi --claim "city=Antwerp"
 
 Here we added the claim city=Antwerp that matches our authorization policy.
 We can access the list of tokens of the project. Check the CLI of donet user-jwts..
@@ -384,11 +384,12 @@ some notes for return types. using IActionResult<T> is good for documentation pu
 By adding XML docs to our controllers, we can genrate a XML comment file and configure swagger to use this file to show in the documentation.
 We need to make sure that we generate the XML from the build properties of our api project.
 We included in the documentation different versions of the API, XML docs, return codes etc.
-By using attributes *ProducesResponseType* we can document differnt errors codes, etc
+By using attributes _ProducesResponseType_ we can document differnt errors codes, etc
 Error codes can also be described by response tags in the XML docs.
 We can add remarks to our XML docs a give sample requests and reponses.
 
 We can add authorization to our documentation by specifying a security definition and a security requirement.
+
 # Testing
 
 This section talks about api testing, at an endpoint level, not unit tests.
@@ -461,7 +462,7 @@ How do we log for application insights? By configuring another serilog sink in p
 We need to enable application insights on azure portal. Azure will generate a key that will correlate our logging sink to our resource group in devops. Serilog needs that key to send the logs. Check program.cs
 The application insights was created in the same resrouce group.
 
-The appSettings.production needed to be updated in order to run the app in azure. We need a connection string and we need to fetch the secrets from azure key vault. 
+The appSettings.production needed to be updated in order to run the app in azure. We need a connection string and we need to fetch the secrets from azure key vault.
 Azure key vault is a service that we can use to sote and manage cryptographic keys, secretes and certificates used by cloud applications or services.
 The key vault generated in the azure portal has the URL that we inserted in our application:
 ![](doc/vaultProps.PNG)
@@ -474,7 +475,7 @@ If we check our app settings we also have an Authentication object with a Secret
 
 How does the Keyvaul know that is our application asking for secrets? We used a good practice in Azure Portal called managed identity. We configured our key vault to accept reads from our application by defining access policy:
 ![](doc/KeyVaultAccessPolicies.PNG)
-Our application has an Id in the Azure portal and we added this id to the key vault, so our app authenticates itself to the key vault and they key vault  accepts requests for secrets. Note we only defined read policies so we do not create secrets with our app.
+Our application has an Id in the Azure portal and we added this id to the key vault, so our app authenticates itself to the key vault and they key vault accepts requests for secrets. Note we only defined read policies so we do not create secrets with our app.
 
 For this demo we used the publish functionality from visual studio. But in real-world scenarios is almost never used. The deployment is part of CI/CD pipelines and there is also the API management functionality that should be checked in other trainnings.
 In real-world scenarios we would not have a SQL lite in production.
