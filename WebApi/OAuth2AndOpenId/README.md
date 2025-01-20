@@ -450,3 +450,42 @@ This only guraties that the user that is not in that role does not see the page.
     options.AccessDeniedPath = "/Authentication/AccessDenied"; // path of the access denied page
 });
 ```
+
+## OAuth2
+
+We've seen that OAuth2 is intended for authorization or delegated authorization o be exact: authorizing access to resources like an API. In such scenarions a client application would request an access token from an authorization server.
+Lets imagine a scenarion where a user ins involved:
+
+1. Uses are redirected to the IDP authorization endpoint.
+2. The user proves who they are by providing user name and password, for example. What happens next depended on the flow being used.
+3. What is important for now is that the client application recieves and access token to access resources the user owns. In reality the client app recieves both an identity token and an access token.
+   On every requents, the access token is sent to the APi as a bearer token.
+4. There is a limited form of validation going that uses the access token: like creating a hash from the token ti check if it matches the AT has value of the identity token.
+
+OnpenIdConnect superseeds OAuth2. Even when only access tokens are involved, OpendId connect is used because it provides additional claims and verification methods.
+So technically we have OpendIdConnect for authentication and authorization: some people just mention OAuth2 for authorization.
+
+### OAuth 2 flows
+
+OAuth2 is superseed by OpendIdConnect as we have seen. OAuth2 supports Authorization code flow as well. In addition to that it supports:
+
+1. Resource Owner Passowrd Crendentials flow (user is not redirected to the IDP to provide credentials, it is within the same app). It was included for legacy reasons. It is impossible to integrate with other identity providers thorugh federation because it does not involve redirection. it makes single sign-om scenarios harder and so on.
+2. Client credentials flow: no user involved. It only involded client applications, typically client ID and secret. Because it does not involve users, it is very useful for machine-to-machine communication
+
+![](doc/OAuth2Flows.png)
+
+An access token does not need to be a jwt like an identity token (it often is).
+See out access token:
+![](doc/AccessToken1.png)
+
+The audience is not loner our client application but it is our api.
+It also has reources at our IDP level as intended audience: we pass the access token when calling the user info endpoint and that requres an access token..
+Client Id is also new and it represent the client application: on the identity token this was part of the audience array..
+The other values are the same: scopes. We have the api scope to access the api but we also have identity related information scopes:
+![](doc/AccessToken2.png)
+When we ask the user info endpoint it will return the information mapped to those scopes.
+Lastly we also see the authentication methods.
+
+## Secure the API
+
+Securing the APi is even more important. It is where the data resides.
