@@ -47,6 +47,7 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.Remove("aud");
     options.ClaimActions.DeleteClaim("sid");
     options.Scope.Add("roles");
+    options.Scope.Add("imagegalleryapi.fullaccess");
     options.ClaimActions.MapJsonKey("role", "role");
     options.TokenValidationParameters = new()
     {
