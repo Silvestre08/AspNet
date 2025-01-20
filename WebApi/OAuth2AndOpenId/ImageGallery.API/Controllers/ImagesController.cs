@@ -1,12 +1,14 @@
 ﻿using AutoMapper;
 using ImageGallery.API.Services;
 using ImageGallery.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ImageGallery.API.Controllers
 {
     [Route("api/images")]
     [ApiController]
+    [Authorize]
     public class ImagesController : ControllerBase
     {
         private readonly IGalleryRepository _galleryRepository;

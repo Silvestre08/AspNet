@@ -488,4 +488,145 @@ Lastly we also see the authentication methods.
 
 ## Secure the API
 
-Securing the APi is even more important. It is where the data resides.
+Securing the APi is even more important than securing the client application. It is where the data resides.
+We can secure the Webapi with Authorizaton code flow with PKCE as well.
+It is very similar to the flow we saw before:
+
+1. Our web app starts by creating a random string called a code_verifier. It hashes that code_verifier, and that hashed version is called the code_challenge.
+2. web application creates an authentication request with response type code and includes the code_challenge. The web application sends the request, and at level of the identity provider, the code_challenge is stored
+3. The user authenticates and the IDP optionally asks for consent
+4. the identity provider redirects back to the web app with the authorization code in the URI.
+5. The web application then calls the token endpoint authenticated with clientid and clientsecret, and it passes through the authorization code and the code_verifier.
+6. The identity provider hashes this and checks if it matches the stored code_challenge, only if that's the case will the IDP return tokens.
+7. We get an access token and identity token back. The identity token is validated at the level of the web client. Part of this validation is calculating the hash from the access token to see if it matches 'at' hash value in the identity token,
+   so the access token takes part in the validation procedure of the identity token.
+8. If validation checks out and a claims identity is created from the identity token, and that is used to sign into our ASP.NET Core MVC web application. We've also got an access token now.
+9. Optionally we can request userinfo from the user info endpoint.
+10. Because we are insterested in calling our api the access token is stored and it is sent on every request to the API as a bearer token.
+11. The token is validated at the api.
+
+So the flow is very similar with the difference know calling the api using an access token.
+
+In order to implement that we need:
+
+1. At the identiy provider we need to add on our config an Api resource and an additional scope that the client can request:
+
+```
+   public static IEnumerable<ApiResource> ApiResources =>
+   new ApiResource[]
+   {
+       new ApiResource("imagegalleryapi", "Image Gallerey API")
+    };
+        public static IEnumerable<Client> Clients =>
+        new Client[]
+            { new Client { ClientName = "Image Gallery" ,
+                ClientId = "imagegalleryclient", // client app identifier
+                AllowedGrantTypes = GrantTypes.Code, // authorization code flow
+                RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
+                PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
+                AllowedScopes =
+                {
+                    IdentityServerConstants.StandardScopes.OpenId,
+                    IdentityServerConstants.StandardScopes.Profile,
+                    "roles",
+                    "imagegalleryapi"
+                },
+                ClientSecrets = { new Secret("secret".Sha256()) },
+                RequireConsent = true,
+
+            }
+
+            };
+```
+
+2. In the hosting extensions class we need to add the Api resources:
+
+```
+       .AddInMemoryApiScopes(Config.ApiScopes)
+       .AddInMemoryApiResources(Config.ApiResources)
+```
+
+As we can see we also have a list of api resources. So why did we add api resources and not scopes?
+
+A scope is an old OAuth2 concept. It simply means the scope of access requested by a client. So a read scope would give a client read access at the level of the api, etc
+It is a simple approach but not sufficient.~
+Resource is another concept more elaborate like a physical or logical api. In our case the image gallery api is a resource.
+In more complex system we can have many apis, or we decide to split our api into modules or "logical apis" with each having it own resource name. Each api can have scopes, that will be used for more fine-grained control:
+as an exaple image gallery.read or write.scope.
+it's not hard to imagine that different client applications that need access to our Image Gallery API are allowed different levels of access inside of that API:
+
+Whenever a scope related to a resource is requested by a client application, the access token will contain the resource as an audience value, and the scope will be in the scopes list:
+![](doc/Apiscopes.png)
+Other apps would be similar, like a mobile app that can only have read scopes at the api. Like this, you can use these scopes to build a fine‑grained authorization layer for your AP.
+So the code above will be transformed into:
+
+```
+    public static IEnumerable<ApiScope> ApiScopes =>
+       new ApiScope[]
+           {
+               new ApiScope("imagegalleryapi.fullaccess")
+           };
+
+   public static IEnumerable<ApiResource> ApiResources =>
+   new ApiResource[]
+   {
+       new ApiResource("imagegalleryapi", "Image Gallerey API")
+       {
+           Scopes = { "imagegalleryapi.fullaccess" }
+       }
+   };
+```
+
+So basically when a client asks for imagegalleryapi.fullaccess scope it will get an access token with imagegalleryapi in the audience list and the requested scope in a list of scopes. We need to make sure that scopes is available to our client app:
+
+```
+      AllowedScopes =
+     {
+         IdentityServerConstants.StandardScopes.OpenId,
+         IdentityServerConstants.StandardScopes.Profile,
+         "roles",
+         "imagegalleryapi.fullaccess"
+     },
+```
+
+Now, on the level of the client app all we need to do is becase we are already receiving via the back channel an access token:
+
+```
+    options.Scope.Add("imagegalleryapi.fullaccess");
+```
+
+The last steps are on our API. We need to configure the API middleware to verify the access tokens.
+
+1. First install asp.net package for jwtBearer.
+2. Second we need to register the authentication services and configure them:
+
+```
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.Authority = "https://localhost:5001";
+    // address of the identity provider.
+    // The middleware uses this to load metadata so it knows about endpoints and keys. it will cache this information
+    // it validates the access token
+    options.Audience = "imagegalleryapi"; // checks for the audience that comes with the token.
+        options.TokenValidationParameters = new()
+    {
+        ValidTypes = new[] { "at+jwt" },
+        RoleClaimType = "role",
+        NameClaimType = "given_name",
+    };
+});
+```
+
+The last step of ValidTypes is very new. This is done to avoid JWT confusion attacks. That's an attack that allowed APIs to become confused between quotation marks in regards to the tokens it would accept as valid.
+It allowed attackers to circumvent token signature checking by providing an arbitrary token protected with an HMAC.
+One way to mitigate this is via this type check. This didn't exist a few years ago, so this just goes to show how fast attacks are discovered and standards that mitigate them are developed
+What I also prefer to do is ensure that the incoming claims and validation on those claims are mapped and executed the same way as they are on the client like on the API if both are under your control
+Then configure the middleware:
+
+```
+app.UseAuthentication(); // order mattersn. should be before authorization and map controllers.
+```
+
+Then we decorate the controllers with Authorize attribute.
+When we start our api on the consent screen we have a new section basically consenting access to the api.
+The last step is to configure the client app to send the access token on the requests to the API.
