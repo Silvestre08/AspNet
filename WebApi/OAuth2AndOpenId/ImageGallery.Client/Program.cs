@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Net.Http.Headers;
+using Duende.IdentityModel.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,7 @@ builder.Services.AddControllersWithViews()
         configure.JsonSerializerOptions.PropertyNamingPolicy = null);
 
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+builder.Services.AddOpenIdConnectAccessTokenManagement();
 
 // create an HttpClient used for accessing the API
 builder.Services.AddHttpClient("APIClient", client =>
@@ -20,7 +22,7 @@ builder.Services.AddHttpClient("APIClient", client =>
     client.BaseAddress = new Uri(builder.Configuration["ImageGalleryAPIRoot"]);
     client.DefaultRequestHeaders.Clear();
     client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
-});
+}).AddUserAccessTokenHandler();
 
 
 builder.Services.AddAuthentication(options =>

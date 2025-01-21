@@ -630,3 +630,72 @@ app.UseAuthentication(); // order mattersn. should be before authorization and m
 Then we decorate the controllers with Authorize attribute.
 When we start our api on the consent screen we have a new section basically consenting access to the api.
 The last step is to configure the client app to send the access token on the requests to the API.
+There are several ways of doing it on an MVC app.
+One way to do it is to add a delegate handler
+
+1. We can add a reference to the package Duende.AccessTokenManagement.OpenIdConnect from the creators of the identity server. This is the packages for user centric flows
+   For client credentials flow we would have Duende.AccessTokenManagement
+2. Add in program the token management services
+   builder.Services.AddOpenIdConnectAccessTokenManagement();
+   builder.Services.AddHttpClient("APIClient", client =>
+   {
+   client.BaseAddress = new Uri(builder.Configuration["ImageGalleryAPIRoot"]);
+   client.DefaultRequestHeaders.Clear();
+   client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+   }).AddUserAccessTokenHandler(); // sends the token on every request.
+3. Now we see in the console logs the access token:
+   When inspectings it we see :
+   ![](doc/accessTokenInspection.png)
+   We see more scopes than just the ones of our api. The call to the user info endpoint passes through this access token so it needs the profile and role scopes as well.
+   That is why the idendity server is also in the list of audiences. In some IDP implementations that might not be the case because it is just assumed that the user info endpoint will be called.
+
+Let's now make the api return the list of images related to a specific user.
+We can access the user object from the controller class. By validating the access token, ASP.Net core gives us access to an user object.
+
+```
+ var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value; // sub claim that identifies the user.
+
+  var imagesFromRepo = await _galleryRepository.GetImagesAsync(userId); // pass the user to do the filtering in the repository
+```
+
+We also need to protect the other actions. If a malicious user knows the URI it can delete an inage etc. Instead of repeating the previous piece of code om every actions there is a more elegant wayt to do it.
+We can even prevent the request to get to the controller action by implementing Polocies. We will learn about policies in the next section.
+But first, we need to add identity claims to the access token too. Until know we only have scopes.
+We want to ensure aon our API the only users in the paying role can create images. Firsr, at the identity provider we need to change our api scope to include the claims role:
+
+```
+    public static IEnumerable<ApiResource> ApiResources =>
+    new ApiResource[]
+    {
+        new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role" })
+        {
+            Scopes = { "imagegalleryapi.fullaccess" }
+        }
+    };
+```
+
+By just declaring the list of claims, while intializing the APi scope next time the scope is request, the role claims will be returned.
+Onto protecting the API:
+Lets decorate the Createe action of the controller with an Autorize attribue:
+
+```
+
+        [HttpPost()]
+        [Authorize(Roles ="PayingUser")]
+        public async Task<ActionResult<Image>> CreateImage([FromBody] ImageForCreation imageForCreation)
+```
+
+Also notice that the our DTO does not contain an user id. That is on purpose.
+It is the responsibility of the API to inspect the token and fill that information out. For obvious security reasons. The user id comes from a signed and verified token, so we know this Id was not tampered.
+
+```
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+            if (userId == null)
+            {
+                throw new Exception("User identifier is missing.");
+            }
+            imageEntity.OwnerId = userId;
+
+            // add and save.
+            _galleryRepository.AddImage(imageEntity);
+```
