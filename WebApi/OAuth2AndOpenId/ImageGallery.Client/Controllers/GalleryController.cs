@@ -188,6 +188,7 @@ namespace ImageGallery.Client.Controllers
         public async Task LogIdentityInformation() 
         {
             var identityToke = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.IdToken);
+            var accessToken = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.AccessToken);
 
             var userClaimsBuilder = new StringBuilder();
             
@@ -198,6 +199,7 @@ namespace ImageGallery.Client.Controllers
             }
 
             _logger.LogInformation($"Identity token and user claims: {Environment.NewLine} {identityToke} {Environment.NewLine} {userClaimsBuilder}");
+            _logger.LogInformation($"Access token: {Environment.NewLine} {accessToken}");
         }
     }
 }
