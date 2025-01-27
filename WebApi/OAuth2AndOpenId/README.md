@@ -901,3 +901,16 @@ builder.Services.AddHttpContextAccessor();
 5. Decorate the actions with the authorize attribute. Authorization layer built.
 
 It is also possible to use custom attributes instead of the Authorize attribute. It can make the application a little more maintainable.
+Having the requirement and handler in place it is actually quite easy:
+
+```
+    public class MustOwnImageAttribute : AuthorizeAttribute, IAuthorizationRequirementData
+    {
+        public IEnumerable<IAuthorizationRequirement> GetRequirements()
+        {
+            return new[] { new MustOwnImageRequirement() };
+        }
+    }
+```
+
+Notice the interface implemented and the base class. The apply the attribute in the actions
