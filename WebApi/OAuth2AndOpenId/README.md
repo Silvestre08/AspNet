@@ -913,4 +913,4 @@ Having the requirement and handler in place it is actually quite easy:
     }
 ```
 
-Notice the interface implemented and the base class. The apply the attribute in the actions
+Notice the interface implemented and the base class. The apply the attribute in the actions.
