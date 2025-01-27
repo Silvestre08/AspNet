@@ -699,3 +699,205 @@ It is the responsibility of the API to inspect the token and fill that informati
             // add and save.
             _galleryRepository.AddImage(imageEntity);
 ```
+
+## Authorization policies
+
+Nowadays authorization policies with attribute based access control are the approach considered more flexible. Even when compared to role base authorization.
+They allow the setup of complex rules.
+Here are the main differences between the two:
+![](doc/Rolevspolicies.png)
+Techically a role can be an attribute of a policy. But a policy can have many attribute like: a user is allowed an action if has a certain role, lives in a certain city and was born within a certain date.
+
+Asp.net core has built in support for policies.
+Lets add the policy of allowing the user to add an image if he was born in Belgium.
+We need to create a country claim for that. First on the identity provider. We also need to ensure our client can ask for that claim
+So we add a new identity resource country for which we will return the country claim.
+SO we need to add that information to the each user.
+Configure the client to ask for that claim.
+The next step is to create an authorization policy. If we want to reuse the policies on both mvc client and api we can create a class library.
+The policy will look like this:
+
+```
+        public static AuthorizationPolicy CanAddImage()
+        {
+            return new AuthorizationPolicyBuilder().RequireAuthenticatedUser().RequireClaim("country", "be").
+                RequireRole("PayingUser").Build();
+        }
+```
+
+On the mvc client Lets see the policy:
+
+```
+builder.Services.AddAuthorization(options => { options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage()); });
+```
+
+On our layout class we are replacing the check if the user is in role with a call to the Authorization service (it gets injected when we can add authorization):
+
+```
+ @if ((await AuthorizationService.AuthorizeAsync(User, "CanAddImage")).Succeeded)
+ {
+
+     <li class="nav-item">
+         <a class="nav-link text-dark" asp-area="" asp-controller="Gallery" asp-action="AddImage">Add an Image</a>
+     </li>
+
+ }
+```
+
+Protecting the action is done with the attribute as well but instead of role we referencen the policy:
+
+```
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "UserCanAddImage")]
+        //[Authorize(Roles = "PayingUser")]
+        public async Task<IActionResult> AddImage(AddImageViewModel addImageViewModel)
+        {}
+
+```
+
+We need to follow similar steps to use the policy on our api in program cs and add a similar attribute to the controller.
+The thing is that the access token also needs to contain the new country claim, otherwise authorization will not work.
+So at level of the IDP we need to include on the api resource the new claim:
+
+```
+   new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
+   {
+       Scopes = { "imagegalleryapi.fullaccess" }
+   }
+```
+
+We can improve our policies. We can leverage scopes inside the api to check whether something is allowed.
+We are now talking about users not involved but more about what client application are allowed to do.
+It is another level of authorization.
+Because this is an api only policy, in this small project does not make sense to share it in a library.
+We can define directly the policy on our api when we configure the authorization middleware:
+
+```
+    options.AddPolicy("ClientApplicationCanWrite", policyBuilder => policyBuilder.RequireClaim("scope", "imagegalleryapi.write"));
+    // apply then in the controller
+
+```
+
+We add the scopes to API scopes at our level of the identity provider and link them to the api resource:
+
+```
+        new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
+        {
+            Scopes = { "imagegalleryapi.fullaccess", "imagegalleryapi.read", "imagegalleryapi.write" }
+        }
+
+        // htey need to be present on the list of api scopes
+```
+
+Configure the allowed scopes for the client:
+
+```
+    { new Client { ClientName = "Image Gallery" ,
+        ClientId = "imagegalleryclient", // client app identifier
+        AllowedGrantTypes = GrantTypes.Code, // authorization code flow
+        RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
+        PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
+        AllowedScopes =
+        {
+            IdentityServerConstants.StandardScopes.OpenId,
+            IdentityServerConstants.StandardScopes.Profile,
+            "roles",
+            //"imagegalleryapi.fullaccess",
+            "imagegalleryapi.read",
+            "country"
+        },
+        ClientSecrets = { new Secret("secret".Sha256()) },
+        RequireConsent = true,
+    }
+    };
+```
+
+So we can see that the client can ask for read only. As last step we configure the client application to ask for this scope
+By trying to create an image we then see forbidden.
+If we add "imagegalleryapi.write" to the allowed scopes we will be authorized to perform the operation.
+
+## Policies with requirements and handlers
+
+The built in policies are great for simple cases. When more complex rules are required, like boolean operators, route data access, repository access, etc..
+we can extend policies with requirements and handlers.
+Last example we decorated an api action and it ended with two attributes, one for each policy.
+All policies need to be valid. A policy has a set of requirements. So far we used built in requirements like RequireClaim, etc
+We can build custom requirements bi implementing the IAuthorizationRequirement interface.
+There is also the concept of handlers. AutorizatonHandler<T>
+where T is of type requirement.
+If none of the requirement handlers fail and one of them returns true, the requirement is met.
+It is on those handlers more complex logic resides: like calling repo to check if a user owns an image.
+![](doc/RequirementAndHandlers.png)
+We can build a full fledged authorization layer.
+How to create a custom policy:
+
+1. Define a requirement :
+
+```
+    public class MustOwnImageRequirement : IAuthorizationRequirement
+    {
+        public MustOwnImageRequirement()
+        {
+
+        }
+    }
+```
+
+2. Define the requirement handler. We inject the repository and http accessor to run our logic:
+
+```
+    public class MustOwnImageHandler : AuthorizationHandler<MustOwnImageRequirement>
+    {
+        private readonly IGalleryRepository _galleryRepository;
+        private readonly IHttpContextAccessor _contextAccessor;
+
+        public MustOwnImageHandler(IHttpContextAccessor httpContextAccessor, IGalleryRepository galleryRepository)
+        {
+            _contextAccessor = httpContextAccessor;
+            _galleryRepository = galleryRepository;
+        }
+        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, MustOwnImageRequirement requirement)
+        {
+            var imageId = _contextAccessor.HttpContext?.GetRouteValue("id")?.ToString();
+            if (!Guid.TryParse(imageId, out Guid idAsGuid))
+            {
+                context.Fail();
+                return;
+            }
+
+            var imagerOwner = (await _galleryRepository.GetImageAsync(idAsGuid))?.OwnerId;
+
+            if (context.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value == imagerOwner)
+            {
+                context.Succeed(requirement);
+            }
+        }
+    }
+```
+
+3. Add the policy to the policy builder:
+
+```
+
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage());
+    options.AddPolicy("ClientApplicationCanWrite", policyBuilder => policyBuilder.RequireClaim("scope", "imagegalleryapi.write"));
+    options.AddPolicy("MustOwnImage", policyBuilder =>
+    {
+        policyBuilder.RequireAuthenticatedUser();
+        policyBuilder.AddRequirements(new MustOwnImageRequirement());
+    });
+});
+```
+
+4. Add the required services to the IoC container:
+
+```
+builder.Services.AddScoped<IAuthorizationHandler, MustOwnImageHandler>();
+builder.Services.AddHttpContextAccessor();
+```
+
+5. Decorate the actions with the authorize attribute. Authorization layer built.
+
+It is also possible to use custom attributes instead of the Authorize attribute. It can make the application a little more maintainable.

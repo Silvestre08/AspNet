@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Net.Http.Headers;
 using Duende.IdentityModel.Client;
+using ImageGallery.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,16 +50,20 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.Remove("aud");
     options.ClaimActions.DeleteClaim("sid");
     options.Scope.Add("roles");
-    options.Scope.Add("imagegalleryapi.fullaccess");
+    options.Scope.Add("country");
+    //options.Scope.Add("imagegalleryapi.fullaccess");
+    options.Scope.Add("imagegalleryapi.read");
+    options.Scope.Add("imagegalleryapi.write");
     options.ClaimActions.MapJsonKey("role", "role");
+    options.ClaimActions.MapUniqueJsonKey("country", "country");
     options.TokenValidationParameters = new()
     {
         NameClaimType =  "given_name",
         RoleClaimType = "role"
 
     };
-}); 
-
+});
+builder.Services.AddAuthorization(options => { options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage()); });
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
