@@ -914,3 +914,8 @@ Having the requirement and handler in place it is actually quite easy:
 ```
 
 Notice the interface implemented and the base class. The apply the attribute in the actions.
+
+## Managing Tokens
+Tokens have a life time. They expire. The defaults of the identity server are the following:
+
+It needs 
