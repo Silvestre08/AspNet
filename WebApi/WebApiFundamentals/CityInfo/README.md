@@ -331,6 +331,7 @@ The key is related to the issuer. The cli will give us the key that we can copy 
 Further command combinations are possible: we can specify claims for the token as well, so that we can test authorization polocies:
 dotnet user-jwts create --issuer https://localhost:7169 --audience cityinfoapi --claim "city=Antwerp"
 
+Note: the issue might change based on the machine this runs. Check the launchSettings.json file for the profile and see which url that will be launched.
 Here we added the claim city=Antwerp that matches our authorization policy.
 We can access the list of tokens of the project. Check the CLI of donet user-jwts..
 
