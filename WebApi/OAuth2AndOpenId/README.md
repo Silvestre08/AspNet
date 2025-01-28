@@ -380,27 +380,35 @@ So far we have seen authentication: the process to determine who a user is. Lets
 One way to do that is use Role-Base access control. A role has a set of permissions that tell us what a user is/is not allowed to do.
 There is also another way like attribute based access control (preferred over rbac and to see later).
 To enable RBAC we need:
+
 1. define new claim "role" and add to test users
 2. Add a new identity resource. Role scope is not standard of OpendIdConnect. So when a client asks for this scope, the defined claims for this scope need to be returned.
+
 ```
 
             new IdentityResource("roles", "Your role(s)", new [] { "roles" }),
 ```
+
 3. Add roles to the allowed scope list of the client application:
+
 ```
-  AllowedScopes = 
-  { 
+  AllowedScopes =
+  {
       IdentityServerConstants.StandardScopes.OpenId,
       IdentityServerConstants.StandardScopes.Profile,
       "roles",
   },
 ```
+
 4. On the client app ask for this additional scope and appkly the mapping from the claim to the claims identity:
+
 ```
 options.Scope.Add("roles");
     options.ClaimActions.MapJsonKey("role", "role");
 ```
+
 5. Configure the token validation parameters. When we ask for the user name and role these will be the claims we will look at
+
 ```
     options.TokenValidationParameters = new()
     {
@@ -410,7 +418,9 @@ options.Scope.Add("roles");
     };
 
 ```
+
 6. On the layout html check if the role is Paying user. Only payin users can add an image:
+
 ```
       @if (User.IsInRole("PayingUser"))
   {
@@ -421,3 +431,486 @@ options.Scope.Add("roles");
 
   }
 ```
+
+This only guraties that the user that is not in that role does not see the page. But the user could navigate to it by manipulating the URL. So we have to block the access to our controllers:
+
+```
+        [Authorize(Roles = "PayingUser")]
+        public IActionResult AddImage()
+        {
+            return View();
+        }
+```
+
+7. Add access denied page :
+
+```
+(
+{
+    options.AccessDeniedPath = "/Authentication/AccessDenied"; // path of the access denied page
+});
+```
+
+## OAuth2
+
+We've seen that OAuth2 is intended for authorization or delegated authorization o be exact: authorizing access to resources like an API. In such scenarions a client application would request an access token from an authorization server.
+Lets imagine a scenarion where a user ins involved:
+
+1. Uses are redirected to the IDP authorization endpoint.
+2. The user proves who they are by providing user name and password, for example. What happens next depended on the flow being used.
+3. What is important for now is that the client application recieves and access token to access resources the user owns. In reality the client app recieves both an identity token and an access token.
+   On every requents, the access token is sent to the APi as a bearer token.
+4. There is a limited form of validation going that uses the access token: like creating a hash from the token ti check if it matches the AT has value of the identity token.
+
+OnpenIdConnect superseeds OAuth2. Even when only access tokens are involved, OpendId connect is used because it provides additional claims and verification methods.
+So technically we have OpendIdConnect for authentication and authorization: some people just mention OAuth2 for authorization.
+
+### OAuth 2 flows
+
+OAuth2 is superseed by OpendIdConnect as we have seen. OAuth2 supports Authorization code flow as well. In addition to that it supports:
+
+1. Resource Owner Passowrd Crendentials flow (user is not redirected to the IDP to provide credentials, it is within the same app). It was included for legacy reasons. It is impossible to integrate with other identity providers thorugh federation because it does not involve redirection. it makes single sign-om scenarios harder and so on.
+2. Client credentials flow: no user involved. It only involded client applications, typically client ID and secret. Because it does not involve users, it is very useful for machine-to-machine communication
+
+![](doc/OAuth2Flows.png)
+
+An access token does not need to be a jwt like an identity token (it often is).
+See out access token:
+![](doc/AccessToken1.png)
+
+The audience is not loner our client application but it is our api.
+It also has reources at our IDP level as intended audience: we pass the access token when calling the user info endpoint and that requres an access token..
+Client Id is also new and it represent the client application: on the identity token this was part of the audience array..
+The other values are the same: scopes. We have the api scope to access the api but we also have identity related information scopes:
+![](doc/AccessToken2.png)
+When we ask the user info endpoint it will return the information mapped to those scopes.
+Lastly we also see the authentication methods.
+
+## Secure the API
+
+Securing the APi is even more important than securing the client application. It is where the data resides.
+We can secure the Webapi with Authorizaton code flow with PKCE as well.
+It is very similar to the flow we saw before:
+
+1. Our web app starts by creating a random string called a code_verifier. It hashes that code_verifier, and that hashed version is called the code_challenge.
+2. web application creates an authentication request with response type code and includes the code_challenge. The web application sends the request, and at level of the identity provider, the code_challenge is stored
+3. The user authenticates and the IDP optionally asks for consent
+4. the identity provider redirects back to the web app with the authorization code in the URI.
+5. The web application then calls the token endpoint authenticated with clientid and clientsecret, and it passes through the authorization code and the code_verifier.
+6. The identity provider hashes this and checks if it matches the stored code_challenge, only if that's the case will the IDP return tokens.
+7. We get an access token and identity token back. The identity token is validated at the level of the web client. Part of this validation is calculating the hash from the access token to see if it matches 'at' hash value in the identity token,
+   so the access token takes part in the validation procedure of the identity token.
+8. If validation checks out and a claims identity is created from the identity token, and that is used to sign into our ASP.NET Core MVC web application. We've also got an access token now.
+9. Optionally we can request userinfo from the user info endpoint.
+10. Because we are insterested in calling our api the access token is stored and it is sent on every request to the API as a bearer token.
+11. The token is validated at the api.
+
+So the flow is very similar with the difference know calling the api using an access token.
+
+In order to implement that we need:
+
+1. At the identiy provider we need to add on our config an Api resource and an additional scope that the client can request:
+
+```
+   public static IEnumerable<ApiResource> ApiResources =>
+   new ApiResource[]
+   {
+       new ApiResource("imagegalleryapi", "Image Gallerey API")
+    };
+        public static IEnumerable<Client> Clients =>
+        new Client[]
+            { new Client { ClientName = "Image Gallery" ,
+                ClientId = "imagegalleryclient", // client app identifier
+                AllowedGrantTypes = GrantTypes.Code, // authorization code flow
+                RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
+                PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
+                AllowedScopes =
+                {
+                    IdentityServerConstants.StandardScopes.OpenId,
+                    IdentityServerConstants.StandardScopes.Profile,
+                    "roles",
+                    "imagegalleryapi"
+                },
+                ClientSecrets = { new Secret("secret".Sha256()) },
+                RequireConsent = true,
+
+            }
+
+            };
+```
+
+2. In the hosting extensions class we need to add the Api resources:
+
+```
+       .AddInMemoryApiScopes(Config.ApiScopes)
+       .AddInMemoryApiResources(Config.ApiResources)
+```
+
+As we can see we also have a list of api resources. So why did we add api resources and not scopes?
+
+A scope is an old OAuth2 concept. It simply means the scope of access requested by a client. So a read scope would give a client read access at the level of the api, etc
+It is a simple approach but not sufficient.~
+Resource is another concept more elaborate like a physical or logical api. In our case the image gallery api is a resource.
+In more complex system we can have many apis, or we decide to split our api into modules or "logical apis" with each having it own resource name. Each api can have scopes, that will be used for more fine-grained control:
+as an exaple image gallery.read or write.scope.
+it's not hard to imagine that different client applications that need access to our Image Gallery API are allowed different levels of access inside of that API:
+
+Whenever a scope related to a resource is requested by a client application, the access token will contain the resource as an audience value, and the scope will be in the scopes list:
+![](doc/Apiscopes.png)
+Other apps would be similar, like a mobile app that can only have read scopes at the api. Like this, you can use these scopes to build a fine‑grained authorization layer for your AP.
+So the code above will be transformed into:
+
+```
+    public static IEnumerable<ApiScope> ApiScopes =>
+       new ApiScope[]
+           {
+               new ApiScope("imagegalleryapi.fullaccess")
+           };
+
+   public static IEnumerable<ApiResource> ApiResources =>
+   new ApiResource[]
+   {
+       new ApiResource("imagegalleryapi", "Image Gallerey API")
+       {
+           Scopes = { "imagegalleryapi.fullaccess" }
+       }
+   };
+```
+
+So basically when a client asks for imagegalleryapi.fullaccess scope it will get an access token with imagegalleryapi in the audience list and the requested scope in a list of scopes. We need to make sure that scopes is available to our client app:
+
+```
+      AllowedScopes =
+     {
+         IdentityServerConstants.StandardScopes.OpenId,
+         IdentityServerConstants.StandardScopes.Profile,
+         "roles",
+         "imagegalleryapi.fullaccess"
+     },
+```
+
+Now, on the level of the client app all we need to do is becase we are already receiving via the back channel an access token:
+
+```
+    options.Scope.Add("imagegalleryapi.fullaccess");
+```
+
+The last steps are on our API. We need to configure the API middleware to verify the access tokens.
+
+1. First install asp.net package for jwtBearer.
+2. Second we need to register the authentication services and configure them:
+
+```
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.Authority = "https://localhost:5001";
+    // address of the identity provider.
+    // The middleware uses this to load metadata so it knows about endpoints and keys. it will cache this information
+    // it validates the access token
+    options.Audience = "imagegalleryapi"; // checks for the audience that comes with the token.
+        options.TokenValidationParameters = new()
+    {
+        ValidTypes = new[] { "at+jwt" },
+        RoleClaimType = "role",
+        NameClaimType = "given_name",
+    };
+});
+```
+
+The last step of ValidTypes is very new. This is done to avoid JWT confusion attacks. That's an attack that allowed APIs to become confused between quotation marks in regards to the tokens it would accept as valid.
+It allowed attackers to circumvent token signature checking by providing an arbitrary token protected with an HMAC.
+One way to mitigate this is via this type check. This didn't exist a few years ago, so this just goes to show how fast attacks are discovered and standards that mitigate them are developed
+What I also prefer to do is ensure that the incoming claims and validation on those claims are mapped and executed the same way as they are on the client like on the API if both are under your control
+Then configure the middleware:
+
+```
+app.UseAuthentication(); // order mattersn. should be before authorization and map controllers.
+```
+
+Then we decorate the controllers with Authorize attribute.
+When we start our api on the consent screen we have a new section basically consenting access to the api.
+The last step is to configure the client app to send the access token on the requests to the API.
+There are several ways of doing it on an MVC app.
+One way to do it is to add a delegate handler
+
+1. We can add a reference to the package Duende.AccessTokenManagement.OpenIdConnect from the creators of the identity server. This is the packages for user centric flows
+   For client credentials flow we would have Duende.AccessTokenManagement
+2. Add in program the token management services
+   builder.Services.AddOpenIdConnectAccessTokenManagement();
+   builder.Services.AddHttpClient("APIClient", client =>
+   {
+   client.BaseAddress = new Uri(builder.Configuration["ImageGalleryAPIRoot"]);
+   client.DefaultRequestHeaders.Clear();
+   client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+   }).AddUserAccessTokenHandler(); // sends the token on every request.
+3. Now we see in the console logs the access token:
+   When inspectings it we see :
+   ![](doc/accessTokenInspection.png)
+   We see more scopes than just the ones of our api. The call to the user info endpoint passes through this access token so it needs the profile and role scopes as well.
+   That is why the idendity server is also in the list of audiences. In some IDP implementations that might not be the case because it is just assumed that the user info endpoint will be called.
+
+Let's now make the api return the list of images related to a specific user.
+We can access the user object from the controller class. By validating the access token, ASP.Net core gives us access to an user object.
+
+```
+ var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value; // sub claim that identifies the user.
+
+  var imagesFromRepo = await _galleryRepository.GetImagesAsync(userId); // pass the user to do the filtering in the repository
+```
+
+We also need to protect the other actions. If a malicious user knows the URI it can delete an inage etc. Instead of repeating the previous piece of code om every actions there is a more elegant wayt to do it.
+We can even prevent the request to get to the controller action by implementing Polocies. We will learn about policies in the next section.
+But first, we need to add identity claims to the access token too. Until know we only have scopes.
+We want to ensure aon our API the only users in the paying role can create images. Firsr, at the identity provider we need to change our api scope to include the claims role:
+
+```
+    public static IEnumerable<ApiResource> ApiResources =>
+    new ApiResource[]
+    {
+        new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role" })
+        {
+            Scopes = { "imagegalleryapi.fullaccess" }
+        }
+    };
+```
+
+By just declaring the list of claims, while intializing the APi scope next time the scope is request, the role claims will be returned.
+Onto protecting the API:
+Lets decorate the Createe action of the controller with an Autorize attribue:
+
+```
+
+        [HttpPost()]
+        [Authorize(Roles ="PayingUser")]
+        public async Task<ActionResult<Image>> CreateImage([FromBody] ImageForCreation imageForCreation)
+```
+
+Also notice that the our DTO does not contain an user id. That is on purpose.
+It is the responsibility of the API to inspect the token and fill that information out. For obvious security reasons. The user id comes from a signed and verified token, so we know this Id was not tampered.
+
+```
+            var userId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+            if (userId == null)
+            {
+                throw new Exception("User identifier is missing.");
+            }
+            imageEntity.OwnerId = userId;
+
+            // add and save.
+            _galleryRepository.AddImage(imageEntity);
+```
+
+## Authorization policies
+
+Nowadays authorization policies with attribute based access control are the approach considered more flexible. Even when compared to role base authorization.
+They allow the setup of complex rules.
+Here are the main differences between the two:
+![](doc/Rolevspolicies.png)
+Techically a role can be an attribute of a policy. But a policy can have many attribute like: a user is allowed an action if has a certain role, lives in a certain city and was born within a certain date.
+
+Asp.net core has built in support for policies.
+Lets add the policy of allowing the user to add an image if he was born in Belgium.
+We need to create a country claim for that. First on the identity provider. We also need to ensure our client can ask for that claim
+So we add a new identity resource country for which we will return the country claim.
+SO we need to add that information to the each user.
+Configure the client to ask for that claim.
+The next step is to create an authorization policy. If we want to reuse the policies on both mvc client and api we can create a class library.
+The policy will look like this:
+
+```
+        public static AuthorizationPolicy CanAddImage()
+        {
+            return new AuthorizationPolicyBuilder().RequireAuthenticatedUser().RequireClaim("country", "be").
+                RequireRole("PayingUser").Build();
+        }
+```
+
+On the mvc client Lets see the policy:
+
+```
+builder.Services.AddAuthorization(options => { options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage()); });
+```
+
+On our layout class we are replacing the check if the user is in role with a call to the Authorization service (it gets injected when we can add authorization):
+
+```
+ @if ((await AuthorizationService.AuthorizeAsync(User, "CanAddImage")).Succeeded)
+ {
+
+     <li class="nav-item">
+         <a class="nav-link text-dark" asp-area="" asp-controller="Gallery" asp-action="AddImage">Add an Image</a>
+     </li>
+
+ }
+```
+
+Protecting the action is done with the attribute as well but instead of role we referencen the policy:
+
+```
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = "UserCanAddImage")]
+        //[Authorize(Roles = "PayingUser")]
+        public async Task<IActionResult> AddImage(AddImageViewModel addImageViewModel)
+        {}
+
+```
+
+We need to follow similar steps to use the policy on our api in program cs and add a similar attribute to the controller.
+The thing is that the access token also needs to contain the new country claim, otherwise authorization will not work.
+So at level of the IDP we need to include on the api resource the new claim:
+
+```
+   new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
+   {
+       Scopes = { "imagegalleryapi.fullaccess" }
+   }
+```
+
+We can improve our policies. We can leverage scopes inside the api to check whether something is allowed.
+We are now talking about users not involved but more about what client application are allowed to do.
+It is another level of authorization.
+Because this is an api only policy, in this small project does not make sense to share it in a library.
+We can define directly the policy on our api when we configure the authorization middleware:
+
+```
+    options.AddPolicy("ClientApplicationCanWrite", policyBuilder => policyBuilder.RequireClaim("scope", "imagegalleryapi.write"));
+    // apply then in the controller
+
+```
+
+We add the scopes to API scopes at our level of the identity provider and link them to the api resource:
+
+```
+        new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
+        {
+            Scopes = { "imagegalleryapi.fullaccess", "imagegalleryapi.read", "imagegalleryapi.write" }
+        }
+
+        // htey need to be present on the list of api scopes
+```
+
+Configure the allowed scopes for the client:
+
+```
+    { new Client { ClientName = "Image Gallery" ,
+        ClientId = "imagegalleryclient", // client app identifier
+        AllowedGrantTypes = GrantTypes.Code, // authorization code flow
+        RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
+        PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
+        AllowedScopes =
+        {
+            IdentityServerConstants.StandardScopes.OpenId,
+            IdentityServerConstants.StandardScopes.Profile,
+            "roles",
+            //"imagegalleryapi.fullaccess",
+            "imagegalleryapi.read",
+            "country"
+        },
+        ClientSecrets = { new Secret("secret".Sha256()) },
+        RequireConsent = true,
+    }
+    };
+```
+
+So we can see that the client can ask for read only. As last step we configure the client application to ask for this scope
+By trying to create an image we then see forbidden.
+If we add "imagegalleryapi.write" to the allowed scopes we will be authorized to perform the operation.
+
+## Policies with requirements and handlers
+
+The built in policies are great for simple cases. When more complex rules are required, like boolean operators, route data access, repository access, etc..
+we can extend policies with requirements and handlers.
+Last example we decorated an api action and it ended with two attributes, one for each policy.
+All policies need to be valid. A policy has a set of requirements. So far we used built in requirements like RequireClaim, etc
+We can build custom requirements bi implementing the IAuthorizationRequirement interface.
+There is also the concept of handlers. AutorizatonHandler<T>
+where T is of type requirement.
+If none of the requirement handlers fail and one of them returns true, the requirement is met.
+It is on those handlers more complex logic resides: like calling repo to check if a user owns an image.
+![](doc/RequirementAndHandlers.png)
+We can build a full fledged authorization layer.
+How to create a custom policy:
+
+1. Define a requirement :
+
+```
+    public class MustOwnImageRequirement : IAuthorizationRequirement
+    {
+        public MustOwnImageRequirement()
+        {
+
+        }
+    }
+```
+
+2. Define the requirement handler. We inject the repository and http accessor to run our logic:
+
+```
+    public class MustOwnImageHandler : AuthorizationHandler<MustOwnImageRequirement>
+    {
+        private readonly IGalleryRepository _galleryRepository;
+        private readonly IHttpContextAccessor _contextAccessor;
+
+        public MustOwnImageHandler(IHttpContextAccessor httpContextAccessor, IGalleryRepository galleryRepository)
+        {
+            _contextAccessor = httpContextAccessor;
+            _galleryRepository = galleryRepository;
+        }
+        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, MustOwnImageRequirement requirement)
+        {
+            var imageId = _contextAccessor.HttpContext?.GetRouteValue("id")?.ToString();
+            if (!Guid.TryParse(imageId, out Guid idAsGuid))
+            {
+                context.Fail();
+                return;
+            }
+
+            var imagerOwner = (await _galleryRepository.GetImageAsync(idAsGuid))?.OwnerId;
+
+            if (context.User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value == imagerOwner)
+            {
+                context.Succeed(requirement);
+            }
+        }
+    }
+```
+
+3. Add the policy to the policy builder:
+
+```
+
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage());
+    options.AddPolicy("ClientApplicationCanWrite", policyBuilder => policyBuilder.RequireClaim("scope", "imagegalleryapi.write"));
+    options.AddPolicy("MustOwnImage", policyBuilder =>
+    {
+        policyBuilder.RequireAuthenticatedUser();
+        policyBuilder.AddRequirements(new MustOwnImageRequirement());
+    });
+});
+```
+
+4. Add the required services to the IoC container:
+
+```
+builder.Services.AddScoped<IAuthorizationHandler, MustOwnImageHandler>();
+builder.Services.AddHttpContextAccessor();
+```
+
+5. Decorate the actions with the authorize attribute. Authorization layer built.
+
+It is also possible to use custom attributes instead of the Authorize attribute. It can make the application a little more maintainable.
+Having the requirement and handler in place it is actually quite easy:
+
+```
+    public class MustOwnImageAttribute : AuthorizeAttribute, IAuthorizationRequirementData
+    {
+        public IEnumerable<IAuthorizationRequirement> GetRequirements()
+        {
+            return new[] { new MustOwnImageRequirement() };
+        }
+    }
+```
+
+Notice the interface implemented and the base class. The apply the attribute in the actions.

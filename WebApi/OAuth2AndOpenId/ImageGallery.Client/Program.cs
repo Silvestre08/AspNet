@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Net.Http.Headers;
+using Duende.IdentityModel.Client;
+using ImageGallery.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,7 @@ builder.Services.AddControllersWithViews()
         configure.JsonSerializerOptions.PropertyNamingPolicy = null);
 
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+builder.Services.AddOpenIdConnectAccessTokenManagement();
 
 // create an HttpClient used for accessing the API
 builder.Services.AddHttpClient("APIClient", client =>
@@ -20,14 +23,17 @@ builder.Services.AddHttpClient("APIClient", client =>
     client.BaseAddress = new Uri(builder.Configuration["ImageGalleryAPIRoot"]);
     client.DefaultRequestHeaders.Clear();
     client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
-});
+}).AddUserAccessTokenHandler();
 
 
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options => 
+{
+    options.AccessDeniedPath = "/Authentication/AccessDenied";
+})
 .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options => 
 {
     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -44,15 +50,20 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.Remove("aud");
     options.ClaimActions.DeleteClaim("sid");
     options.Scope.Add("roles");
+    options.Scope.Add("country");
+    //options.Scope.Add("imagegalleryapi.fullaccess");
+    options.Scope.Add("imagegalleryapi.read");
+    options.Scope.Add("imagegalleryapi.write");
     options.ClaimActions.MapJsonKey("role", "role");
+    options.ClaimActions.MapUniqueJsonKey("country", "country");
     options.TokenValidationParameters = new()
     {
         NameClaimType =  "given_name",
         RoleClaimType = "role"
 
     };
-}); 
-
+});
+builder.Services.AddAuthorization(options => { options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage()); });
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

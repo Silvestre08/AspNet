@@ -1,6 +1,11 @@
 using ImageGallery.API.DbContexts;
 using ImageGallery.API.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.JsonWebTokens;
+using ImageGallery.Authorization;
+using ImageGallery.API.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +25,32 @@ builder.Services.AddScoped<IGalleryRepository, GalleryRepository>();
 
 // register AutoMapper-related services
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
+JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.Authority = "https://localhost:5001";
+    // address of the identity provider.
+    // The middleware uses this to load metadata so it knows about endpoints and keys. it will cache this information
+    // it validates the access token
+    options.Audience = "imagegalleryapi"; // checks for the audience that comes with the token.
+    options.TokenValidationParameters = new() 
+    {
+        ValidTypes = new[] { "at+jwt" },
+        RoleClaimType = "role",
+        NameClaimType = "given_name",
+    };
+});
+builder.Services.AddScoped<IAuthorizationHandler, MustOwnImageHandler>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthorization(options => { 
+    options.AddPolicy("UserCanAddImage", AuthorizationPolicies.CanAddImage());
+    options.AddPolicy("ClientApplicationCanWrite", policyBuilder => policyBuilder.RequireClaim("scope", "imagegalleryapi.write"));
+    options.AddPolicy("MustOwnImage", policyBuilder => 
+    { 
+        policyBuilder.RequireAuthenticatedUser();
+        policyBuilder.AddRequirements(new MustOwnImageRequirement());
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -28,7 +58,7 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
