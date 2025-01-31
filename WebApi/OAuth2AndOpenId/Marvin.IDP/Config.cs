@@ -38,6 +38,11 @@ public static class Config
                 AllowedGrantTypes = GrantTypes.Code, // authorization code flow
                 RedirectUris = { "https://localhost:7184/signin-oidc" }, // client redirect uri
                 PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
+                UpdateAccessTokenClaimsOnRefresh = true, // Refresh the claims
+                AllowOfflineAccess = true,
+                //IdentityTokenLifetime = 300
+                //AuthorizationCodeLifetime = 300
+                AccessTokenLifetime = 120,
                 AllowedScopes = 
                 { 
                     IdentityServerConstants.StandardScopes.OpenId,
