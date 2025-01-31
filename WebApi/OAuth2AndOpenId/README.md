@@ -916,6 +916,42 @@ Having the requirement and handler in place it is actually quite easy:
 Notice the interface implemented and the base class. The apply the attribute in the actions.
 
 ## Managing Tokens
+
 Tokens have a life time. They expire. The defaults of the identity server are the following:
 
-It needs 
+After the expiration time, the token is not valid to create a claims identity from it.
+SOme clients have their own policies. For example, if the user is active on the app it should be kept as logged in.
+Access tokens usually have a longer life time compared to identity tokens:
+![](doc/expirantionPolicies.png)
+
+When configuring the client at the level of the IDP we can configure the expiration settings for the token and authorization code:
+
+```
+       //IdentityTokenLifetime = 300
+      //AuthorizationCodeLifetime = 300
+      AccessTokenLifetime = 120,
+
+```
+
+The asp.net core api allows for a 5 min extra to accomodate of out of sync clock between servers.
+We can configure though long lived access to the api by using refresh tokens for confidential clients.
+This improves user experience by avoiding redirection to the IDP.
+This is the refresh token flow:
+![](doc/RefreshTokenFlow.png)
+To allow the use of refresh tokens we need to request the scope "offline_access". Offline, in this context, means that the user is not logged in at the level of the identity provider.
+This is how we allow this scope:
+
+```
+AllowOfflineAccess = true,
+UpdateAccessTokenClaimsOnRefresh = true, // Refresh the claims. The default expiration is 30 days so it is important to refresh because claims might change.
+```
+
+Refresh tokens usually have a much longer lifetime than access tokens.
+You can reduce their exposure by adding a sliding lifetime on top of the absolute lifetime.
+This allows for scenarios where a refresh token can be silently used if the user is regularly using the client, but needs a fresh authorize request if the client has not been used for a certain time.
+In other words, they auto-expire much quicker without potentially interfering with the typical usage pattern.
+In our mvc app, by adding this line, we configured the middleware to get refresh tokens automatically when they are about to expire:
+
+```
+.AddUserAccessTokenHandler();
+```

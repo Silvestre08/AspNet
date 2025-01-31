@@ -51,6 +51,7 @@ builder.Services.AddAuthentication(options =>
     options.ClaimActions.DeleteClaim("sid");
     options.Scope.Add("roles");
     options.Scope.Add("country");
+    options.Scope.Add("offline_access");
     //options.Scope.Add("imagegalleryapi.fullaccess");
     options.Scope.Add("imagegalleryapi.read");
     options.Scope.Add("imagegalleryapi.write");
