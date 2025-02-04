@@ -955,3 +955,10 @@ In our mvc app, by adding this line, we configured the middleware to get refresh
 ```
 .AddUserAccessTokenHandler();
 ```
+## Reference Tokens
+Until now we worked with self contained tokens, jwts. We can validate it locally without calling every time the identity provider.
+It is  not easy to control the lifetime of the token. Sometimes we need to revoke immediatly tokens when used to access sensitive data.
+Or when a system has been compromised. This is where reference tokens come into plays.
+Reference tokens are just identifiers linked to a grant result/ set of permissions that normally would be in the JWT, stored at level of the IDP.
+When we use the reference token to access our api, the token is sent to the IDP via the back channel, validated and the content is sent back to the API.
+This process is called introspection. It uses the introspections endpoint. It has more direct control over hte lifetime but the problem is that on every request we go to the IDP.
