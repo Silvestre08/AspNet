@@ -955,10 +955,44 @@ In our mvc app, by adding this line, we configured the middleware to get refresh
 ```
 .AddUserAccessTokenHandler();
 ```
+
 ## Reference Tokens
+
 Until now we worked with self contained tokens, jwts. We can validate it locally without calling every time the identity provider.
-It is  not easy to control the lifetime of the token. Sometimes we need to revoke immediatly tokens when used to access sensitive data.
+It is not easy to control the lifetime of the token. Sometimes we need to revoke immediatly tokens when used to access sensitive data.
 Or when a system has been compromised. This is where reference tokens come into plays.
 Reference tokens are just identifiers linked to a grant result/ set of permissions that normally would be in the JWT, stored at level of the IDP.
 When we use the reference token to access our api, the token is sent to the IDP via the back channel, validated and the content is sent back to the API.
 This process is called introspection. It uses the introspections endpoint. It has more direct control over hte lifetime but the problem is that on every request we go to the IDP.
+At the level of the identity provider, when configuring the client, there is a property called 'AccessTokenType'.
+If we set that a reference, the client will be working with reference tokens.
+Right after doing that, we will get unauthorized. That is because our api is accepting jwt tokens. We can configure and extra piece of middleware to accept reference tokens.
+Basically our api will call the introspection endpoint of the IDP.
+The introspection endpoint needs authentication too so we need to define a secret for our api, so it can call the introspection endpoint:
+
+```
+// api resource at the level of the idp
+        new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
+        {
+            Scopes = { "imagegalleryapi.fullaccess", "imagegalleryapi.read", "imagegalleryapi.write" },
+            ApiSecrets =  { new Secret("apisecret".Sha256())},
+        }
+```
+
+At the level of the api we add a new nugget package, comment out the jwt token code and add the following configuration:
+
+```
+AddOAuth2Introspection(options =>
+{
+    options.AuthenticationType = "https://localhost:5001";
+    options.ClientSecret = "apisecret";
+    options.ClientId = "imagegalleryapi";
+    options.NameClaimType = "given_name";
+    options.RoleClaimType = "role";
+});
+```
+
+Reference tokens can be revoked. Ways to do it:
+
+1. Administration tool. The admin can revoke the token by deleting the token from the token store of the idenity server.
+1. From a client application might do this when a user logs out. Call token revocation endpoint.
