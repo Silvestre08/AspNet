@@ -27,7 +27,8 @@ public static class Config
     {
         new ApiResource("imagegalleryapi", "Image Gallerey API", new []{ "role", "country"})
         {
-            Scopes = { "imagegalleryapi.fullaccess", "imagegalleryapi.read", "imagegalleryapi.write" }
+            Scopes = { "imagegalleryapi.fullaccess", "imagegalleryapi.read", "imagegalleryapi.write" },
+            ApiSecrets =  { new Secret("apisecret".Sha256())},
         }
     };
 
@@ -40,6 +41,7 @@ public static class Config
                 PostLogoutRedirectUris = { "https://localhost:7184/signout-callback-oidc" },
                 UpdateAccessTokenClaimsOnRefresh = true, // Refresh the claims
                 AllowOfflineAccess = true,
+                AccessTokenType = AccessTokenType.Reference,
                 //IdentityTokenLifetime = 300
                 //AuthorizationCodeLifetime = 300
                 AccessTokenLifetime = 120,

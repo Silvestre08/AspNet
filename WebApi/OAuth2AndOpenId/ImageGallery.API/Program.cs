@@ -26,20 +26,29 @@ builder.Services.AddScoped<IGalleryRepository, GalleryRepository>();
 // register AutoMapper-related services
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.Authority = "https://localhost:5001";
-    // address of the identity provider.
-    // The middleware uses this to load metadata so it knows about endpoints and keys. it will cache this information
-    // it validates the access token
-    options.Audience = "imagegalleryapi"; // checks for the audience that comes with the token.
-    options.TokenValidationParameters = new() 
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).
+    AddOAuth2Introspection(options => 
     {
-        ValidTypes = new[] { "at+jwt" },
-        RoleClaimType = "role",
-        NameClaimType = "given_name",
-    };
-});
+        options.Authority = "https://localhost:5001";
+        options.ClientId = "imagegalleryapi";
+        options.ClientSecret = "apisecret";
+        options.NameClaimType = "given_name";
+        options.RoleClaimType = "role";
+    });
+//    .AddJwtBearer(options =>
+//{
+//    options.Authority = "https://localhost:5001";
+//    // address of the identity provider.
+//    // The middleware uses this to load metadata so it knows about endpoints and keys. it will cache this information
+//    // it validates the access token
+//    options.Audience = "imagegalleryapi"; // checks for the audience that comes with the token.
+//    options.TokenValidationParameters = new() 
+//    {
+//        ValidTypes = new[] { "at+jwt" },
+//        RoleClaimType = "role",
+//        NameClaimType = "given_name",
+//    };
+//});
 builder.Services.AddScoped<IAuthorizationHandler, MustOwnImageHandler>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddAuthorization(options => { 
