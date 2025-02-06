@@ -24,7 +24,10 @@ builder.Services.AddHttpClient("APIClient", client =>
     client.DefaultRequestHeaders.Clear();
     client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
 }).AddUserAccessTokenHandler();
-
+builder.Services.AddHttpClient("IDPClient", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5001");
+});
 
 builder.Services.AddAuthentication(options =>
 {
