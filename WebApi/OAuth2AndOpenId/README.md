@@ -1077,3 +1077,6 @@ dotnet user-jwts create
 The key gets picked from our local machine.
 This create a token. Now we can use --claims flag --audience flag to manipulate a generate token with audience and claims we want to test the authorization layer of our api.
 This tool also behaves like a store. We can list all the tokens we generate. We also have options to remove from the store etc.
+
+## Securing Javascript clients
+Go here..
