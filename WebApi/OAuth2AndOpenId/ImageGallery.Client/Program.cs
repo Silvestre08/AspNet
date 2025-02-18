@@ -14,9 +14,6 @@ builder.Services.AddControllersWithViews()
     .AddJsonOptions(configure => 
         configure.JsonSerializerOptions.PropertyNamingPolicy = null);
 
-JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
-builder.Services.AddOpenIdConnectAccessTokenManagement();
-
 // create an HttpClient used for accessing the API
 builder.Services.AddHttpClient("APIClient", client =>
 {
@@ -28,6 +25,9 @@ builder.Services.AddHttpClient("IDPClient", client =>
 {
     client.BaseAddress = new Uri("https://localhost:5001");
 });
+
+JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+builder.Services.AddOpenIdConnectAccessTokenManagement();
 
 builder.Services.AddAuthentication(options =>
 {
