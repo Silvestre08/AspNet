@@ -36,3 +36,89 @@ Factors to take into account when choosing an approach:
 
 We are going to create a remote api approach in this demo. We are going to use Duende bff. It uses YARP (yet another reverse proxy) to proxy behind the scenes our calls from the javascript client to the api.
 We coul use it directly. There are of course many rever proxies out there.
+
+## Demo
+A sample was included in this section. It has all the code developed so far (until the end of module 9), besides the web client. We add a new project, BFF to show the pattern. 
+It acts as the host for our javascript application. It is where our javascript code will live.
+We want to authenticate from the BFF not from the javascript client.
+The steps to authenticate from a BFF:
+1. Add a new client definition:
+```
+                new Client()
+                {
+                    ClientName = "Image Gallery BFF",
+                    ClientId = "imagegallerybff",                    
+                    AccessTokenType = AccessTokenType.Reference,
+                    AllowedGrantTypes = GrantTypes.Code,
+                    AllowOfflineAccess = true,                    
+                    UpdateAccessTokenClaimsOnRefresh = true,
+                    RedirectUris =
+                    {
+                        "https://localhost:7119/signin-oidc"
+                    },
+                    PostLogoutRedirectUris =
+                    {
+                        "https://localhost:7119/signout-callback-oidc"
+                    },
+                    AllowedScopes =
+                    {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        "roles", 
+                        "imagegalleryapi.read",
+                        "imagegalleryapi.write",
+                        "country"
+                    },
+                    ClientSecrets =
+                    {
+                        new Secret("anothersecret".Sha256())
+                    },
+                    RequireConsent = true
+                }
+```
+2. Because a BFF is a server web app, the configuration is identical to the one of our MVC client. (PCKE protection, same claims etc.)
+What differs, it is the secret, client id and redirect URIs.
+3. Configure the client:
+```
+builder.Services.AddHttpClient("IDPClient", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5001/");
+});
+
+JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
+
+const string bffCookieScheme = "BFFCookieScheme";
+const string bffChallengeScheme = "BFFChallengeScheme";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme = bffCookieScheme;
+    options.DefaultChallengeScheme = bffChallengeScheme;
+}).AddCookie(bffCookieScheme)
+.AddOpenIdConnect(bffChallengeScheme, options =>
+{
+    options.SignInScheme = bffCookieScheme;
+    options.Authority = "https://localhost:5001/";
+    options.ClientId = "imagegallerybff";
+    options.ClientSecret = "anothersecret";
+    options.ResponseType = "code"; 
+    options.SaveTokens = true;
+    options.GetClaimsFromUserInfoEndpoint = true; 
+    options.Scope.Add("roles"); 
+    options.Scope.Add("imagegalleryapi.read");
+    options.Scope.Add("imagegalleryapi.write");
+    options.Scope.Add("country");
+    options.Scope.Add("offline_access");
+    options.ClaimActions.MapJsonKey("role", "role");
+    options.ClaimActions.MapUniqueJsonKey("country", "country");
+    options.TokenValidationParameters = new()
+    {
+        NameClaimType = "given_name",
+        RoleClaimType = "role",
+    };
+});
+
+```
+A key thing here is that the cokkie scheme and and challenge scheme changed. It is a good practice to keep them unique, so cookies in for different applications in the same domain do not interfere with each other.
+
+How to access the identity claims? On our javascript code we do not have access to the cookie. the cookie is encrypted and used by the server. So in order to obtain user information we ask our BFF for it. Check user session controller.
