@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/ImageGallery.BFF.styles.css" asp-append-version="true" />
+    <script>
+        fetch('usersession/givenname').then(
+            (response) => response.json())
+            .then((responseAsJson) => {
+                const logoutButton = document.getElementById('logout_button');
+                logoutButton.innerHTML = 'Logout (' + responseAsJson.given_name + ')';
+            })
+            .catch(console.error);
+    </script>
 </head>
 <body>
     <header>
@@ -25,7 +34,7 @@
                           @if (User.Identity.IsAuthenticated)
                           {
                          <li>
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Logout">Logout</a> </li>
+                            <a class="nav-link text-dark" asp-area="" id="logout_button" asp-controller="UserSession" asp-action="Logout">Logout</a> </li>
                           }
                     </ul>
                 </div>
