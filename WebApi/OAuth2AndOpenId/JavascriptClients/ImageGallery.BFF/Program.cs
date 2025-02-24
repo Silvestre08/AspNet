@@ -1,3 +1,4 @@
+using Duende.Bff.Yarp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.IdentityModel.JsonWebTokens;
 
@@ -13,6 +14,7 @@ builder.Services.AddHttpClient("IDPClient", client =>
     client.BaseAddress = new Uri("https://localhost:5001/");
 });
 
+builder.Services.AddBff().AddRemoteApis();
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 const string bffCookieScheme = "BFFCookieScheme";
@@ -63,6 +65,8 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapRemoteBffApiEndpoint("/bff/images", "https://localhost:7075/api/images").RequireAccessToken(Duende.Bff.TokenType.User);
+
 
 app.MapControllerRoute(
     name: "default",

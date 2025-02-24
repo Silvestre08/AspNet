@@ -119,6 +119,96 @@ builder.Services.AddAuthentication(options =>
 });
 
 ```
-A key thing here is that the cokkie scheme and and challenge scheme changed. It is a good practice to keep them unique, so cookies in for different applications in the same domain do not interfere with each other.
+A key thing here is that the cokkie scheme and and challenge scheme changed. It is a good practice to keep them unique, so cookies meant for different applications in the same domain do not interfere with each other.
 
-How to access the identity claims? On our javascript code we do not have access to the cookie. the cookie is encrypted and used by the server. So in order to obtain user information we ask our BFF for it. Check user session controller.
+How to access the identity claims? On our javascript code we do not have access to the cookie. The cookie is encrypted and used by the server. So in order to obtain user information we ask our BFF for it. Check user session controller:
+```
+    [Authorize]
+    public class UserSessionController : Controller
+    {
+        public IActionResult GivenName()
+        {
+            var obj = new { given_name = User.Claims.FirstOrDefault( c=>c.Type == "given_name")?.Value };
+            return Json(obj);
+        }
+    }
+```
+
+So lets add javascript code to call this end point, so we show user information on the logout button:
+```
+    <script>
+        fetch('usersession/givenname').then(
+            (response) => response.json())
+            .then((responseAsJson) => {
+                const logoutButton = document.getElementById('logout_button');
+                logoutButton.innerHTML = 'Logout (' + responseAsJson.given_name + ')';
+            })
+            .catch(console.error);
+    </script>
+```
+The browser send automatically an authentication cookie to our BFF, when the user is authenticated. The cookie gets sent to the api.
+And now logging out. We need to clear the local cookie. The cookie at the level of IDP and revoke the issued tokens.
+
+```
+public async Task Logout()
+        {
+            var client = _httpClientFactory.CreateClient("IDPClient");
+
+            var discoveryDocumentResponse = await client
+                .GetDiscoveryDocumentAsync();
+            if (discoveryDocumentResponse.IsError)
+            {
+                throw new Exception(discoveryDocumentResponse.Error);
+            }
+
+            var accessTokenRevocationResponse = await client
+                .RevokeTokenAsync(new()
+                {
+                    Address = discoveryDocumentResponse.RevocationEndpoint,
+                    ClientId = "imagegallerybff",
+                    ClientSecret = "anothersecret",
+                    Token = await HttpContext.GetTokenAsync(
+                        OpenIdConnectParameterNames.AccessToken)
+                });
+
+            if (accessTokenRevocationResponse.IsError)
+            {
+                throw new Exception(accessTokenRevocationResponse.Error);
+            }
+
+            var refreshTokenRevocationResponse = await client
+                .RevokeTokenAsync(new()
+                {
+                    Address = discoveryDocumentResponse.RevocationEndpoint,
+                    ClientId = "imagegallerybff",
+                    ClientSecret = "anothersecret",
+                    Token = await HttpContext.GetTokenAsync(
+                        OpenIdConnectParameterNames.RefreshToken)
+                });
+
+            if (refreshTokenRevocationResponse.IsError)
+            {
+                throw new Exception(accessTokenRevocationResponse.Error);
+            }
+
+            // Clears the  local cookie
+            await HttpContext.SignOutAsync("BFFCookieScheme");
+
+            // Redirects to the IDP so it can clear its own session/cookie
+            await HttpContext.SignOutAsync("BFFChallengeScheme");
+        }
+```
+
+## Calling the api from the BFF
+First we installed Duende.BFF Yarp. It is a powrfull library, but on our case we are going to use it for calling the api from the BFF:
+
+```
+builder.Services.AddBff().AddRemoteApis();
+```
+This will make sure the redirect services are in place. Next, we are going to map the routes. We want the calls from the javascript code to its BFF host to be proxied to the remote api.
+
+```
+app.MapRemoteBffApiEndpoint("/bff/images", "https://localhost:7075/api/images").RequireAccessToken(Duende.Bff.TokenType.User);
+//type user: require a user to log in
+```
+After that is calling the local endpoint from the javascript code.
