@@ -1080,3 +1080,6 @@ This tool also behaves like a store. We can list all the tokens we generate. We 
 
 ## Securing Javascript clients
 Go here..
+
+## Managing users
+Openid connect does not directly deal with credentials. What this means, is that the means of authentication of an end user, are beyong the scope of teh standard. The standar just specifies that a user needs to authenticate of be authenticated, before provifing proof who the user is to the client application.
