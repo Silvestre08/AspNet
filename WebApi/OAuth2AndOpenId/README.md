@@ -1082,4 +1082,17 @@ This tool also behaves like a store. We can list all the tokens we generate. We 
 Go here..
 
 ## Managing users
-Openid connect does not directly deal with credentials. What this means, is that the means of authentication of an end user, are beyong the scope of teh standard. The standar just specifies that a user needs to authenticate of be authenticated, before provifing proof who the user is to the client application.
+Openid connect does not directly deal with credentials. What this means, is that the means of authentication of an end user, are beyond the scope of teh standard. 
+The standard just specifies that a user needs to authenticate or be authenticated, before provifing proof who the user is to the client application.
+Various means of authentication exist:
+1. Good old user name and password
+2. Biometrics
+3. Providing a smartphone or hardware token, like an authenticator app.
+4. Transaction authentication (finding the ip is from a different location, etc).
+
+Nowadays, it is more common using more than just one form of authentication, the famous MFA: multi factor authentication.
+We also need to take into account where the credentials are stored. Most of the time, locally on the identity provider with a local database. Sometimes, in other places, like for example, in active directory.
+In this case, we have active directory integration. It is common as well people having accounts in other places like google, facebook, etc that can be used to identify a person.
+So handling all these integrations is another argument to have everything handled centrally at the level of IDP. So we can add more providers, more apps, etc.
+
+
