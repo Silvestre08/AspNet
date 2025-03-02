@@ -1095,3 +1095,22 @@ Nowadays, it is more common using more than just one form of authentication, the
 We also need to take into account where the credentials are stored. Most of the time, locally on the identity provider with a local database. Sometimes, in other places, like for example, in active directory.
 In this case, we have active directory integration. It is common as well people having accounts in other places like google, facebook, etc that can be used to identify a person.
 So handling all these integrations is another argument to have everything handled centrally at the level of IDP. So we can add more providers, more apps, etc.
+One option is to implement all of this manually (custom implementation, takes time but more flexible).
+Some companies have already mechanisms in place that can be impossible to integrate with off-the-shelf products. It is important to avoid security holes.
+Another option is to implement ASP.NET core identity.
+It is an API to manage users, passwords, etc. We can look into it as a bunch of screens for user management combined with a data store.
+It does not support nor implement OAuth2 or OpenID Connect (it supports generation of tokens.)
+So it is very often used with Identity server.
+On a side note, Asp.Net core identity should not be confused with Entra AD and AD B2C - Microsoft Identity Framework (an umbrella for all these things related to IAM on Azure).
+We will do it at the level of the IDP to allow for federation scenarios.
+When starting a new project we should check asp.net core identity. If we need custom work or end up in a situation with existing IAM/users we will end up with a custom implementation.
+We are now going for a custom implementation to learn how all of this works.
+
+## Building database schema
+
+Let's start simpl: two tables (Users and UserClaims with a relationship one-to-many).
+See the initial schema:
+
+![](doc/userSchema.png)
+
+Concurrency stamp helps avoiding concurrency issues while updating the users. When a user is saved the concurrency value is changed. So if updating almost at the same time it will fail because the value will not match.
