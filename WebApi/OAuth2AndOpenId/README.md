@@ -11,16 +11,16 @@ It is still widely used in enterprise environments. It is not a very good fit fo
 The world is now different. Apps are usually not under the same domain, apis communicate with each other, with many integrations with other systems, etc.
 Not that long ago, on every request, username and password were being sent: bad idea. Now we send tokens in every request.
 
-First, people developed home-grown token services. A login endpoint that would take username and password and generate the token. It is a better approach but it still sends credentials.
+First, people developed home-grown token services. A login endpoint that would take username and password and generate the token. It is a better approach, but it still sends credentials.
 Why reivent the weel? we then would need to implement token validation and signing, separate authentication and authorization, for each application, etc.. A lot of mistakes and maintnance issues can happen.
 
 So we look for an identity provider central to all applications. It is the reponsibility of the identity provider to verify the users are who they say they are, and to provide proof of identity to other applications.
 This responsibility shouldn't be on the clients.
-So the identity provider is a central place for IAM (Identity and Access Management):
+The identity provider is a central place for IAM (Identity and Access Management):
 ![](doc/Iam.PNG)
 
-It would be impossible to manage without a central identity provider. Changing encryptions algorithms for passwords: we change in one place.
-Some apps might require multi-factor authentication and some not, etc.
+It would be impossible to manage modern enterprise applications without a central identity provider. Changing encryptions algorithms for passwords, etc: we change in one place.
+Some apps might require multi-factor authentication and some not, etc. It is very convenient to have a central location for authentication.
 
 ## OAuth2 and OpendIdConnect
 
@@ -44,7 +44,7 @@ The client application asks the identity provider for proof of identity, so it c
 Usually, a client app redirects the user to the identiy provider application, where the user needs to prove identity (like username and password, for example).
 The identity provider generates an identity token, signs it and sends it to the client application.
 The client verifies it and derives claims from it, like an authentication cookie, for example in asp.net core app.
-In an mvc app, the browser then sends that cookie on each request.
+In a mvc app, the browser then sends that cookie on each request.
 OpendIdConnect has several types of flows. It may depend on the app (web server app, client app etc).
 
 For that there are public clients and confidential clients:
@@ -133,7 +133,7 @@ A test user also comes with a few claims.
 Claims are information about the user: name, family names, etc.
 Claims are related to scopes.
 Like we have seen, we are using the open id scope. So anytime a client requests the open id scope the user identifier claim is returned.
-In order to return to a client claims like the name, they need to request the Progile scope. We need to add it to the identiy resource list:
+In order to return to a client claims like the name, they need to request the Profile scope. We need to add it to the identiy resource list:
 
 '''
 public static IEnumerable<IdentityResource> IdentityResources =>
@@ -144,9 +144,9 @@ new IdentityResources.Profile()
 };
 '''
 So OpendIdConnect has a few standardized claims. So far we mentioned openid and profile:
-|[](doc/profileopenidclaims.PNG)
+![](doc/profileopenidclaims.PNG)
 
-There are more standard scope/claims mapping. Scope phone maps to phone_number, prhone_number_verified, etc. We can add our scopes as well.
+There are more standard scope/claims mapping. Scope phone maps to phone_number, phone_number_verified, etc. We can add our scopes as well.
 
 ## Authorization code flow
 
@@ -170,7 +170,7 @@ A response type of code means that we are going to use authorization code flow a
    This code is delivered via the URI, that is called front channel communication (visible to the browser).
 4. The client then asks the token endpoint through the back channel (does not use redirection and thus is not visible to the browser). This is a server to server http request (might not apply to static apps living in the browser TO CHECK because this is MVCC APP).
 5. The client sends to the token endpoint the authorization code, and other information like client id and secret.
-6. At the client, token is validated. After the token is validated, the client application knows who the user is. There are libraries that do the validation for us.
+6. At the client, the token is validated. After the token is validated, the client application knows who the user is. There are libraries that do the validation for us.
    On our case, the distinction between fron-channel and back-channel communication:
    ![](doc/fronchannel.PNG)
 
@@ -218,9 +218,10 @@ builder.Services.AddAuthentication(options =>
 });
 ```
 
-We configured cookie as a default authentication scheme. This means that once we have an identity token, that is validated and transformed into identity claims, it will be stored in an encrypted cookie that will be analyzied by our web app.. It is where we store the credentials. Notice that the authentication default scheme matches the scheme of the cookie.
+We configured cookie as a default authentication scheme. This means that once we have an identity token, that is validated and transformed into identity claims, it will be stored in an encrypted cookie that will be analyzed by our web app. It is where we store the credentials. Notice that the authentication default scheme matches the scheme of the cookie.
 In subsequent requests, the cookie will be sent and it is this cookie our app is going to check to validate authenticated requests.
 Note: an authentication scheme is a string identifier that represents a specific authentication handler in asp.net core. You can configure multiple authentication methods (e.g., cookies, JWT, or OAuth). Each method is registered with a unique scheme name. Policy enforcement: In ASP.NET Core Authorization, you can tie a specific scheme to an authorization policy.
+
 We can see that we added openid connect scheme as well. This handler will be responsible to perform the authentication requests to the IDP. See that the scheme matches the challenge scheme. See as well that the signin scheme matches the cookie scheme defined previously. This will make sure that the claims will be stored in the cookie with the authentication scheme with the same name.
 Then we make sure the request pipelie is requiring authentication:
 
@@ -239,7 +240,7 @@ When we inspect the logs of the identity provider we can verify a few more thing
 2. See the tokens being sent back to the client.
 
 So what happened was that the middleware received an authorization code and it used that to call the token together with the secret and client id. It received an identity token and validated it, stored it and created identity claims from it and stored in an encrypted cookie.
-We can verify by looking into the console of our mvc client appÇ
+We can verify by looking into the console of our mvc client app.
 ![](doc/identitytoken.png)
 
 We can inspect the contents of a token on jwt.io.
@@ -255,10 +256,10 @@ RequireConsent = true,
 
 Authorization code flow is vulnerable to code injection attacks. This means that an attacker got a hold of the authorization code of the victim and the code is a short term proof of identity that links the server session to the browser session. So the attacker can impersonate a user.
 The way to mitigate this is to use the PKCE.
-This means that on every request to the authorization endpoint, a secret is created by the client. When calling the token endpoint, the secret is verified. This mitigates the attack because the atacker does not access the secret generated by the client on every request.
+This means that on every request to the authorization endpoint, a secret is created by the client. When calling the token endpoint, the secret is verified. This mitigates the attack because the atatcker does not access the secret generated by the client on every request.
 
-The steps of the authorization code flow with PKCE are similar to the standar authorization code flow, with a few key differences.
-Before calling the authorization endpoint, the client application creates a code_verifier and hashes it. It sends this hashed version (the code_challenge) to the authorization endpoint. The id stores the code. The nexgt steps are similar besides the fact that the token request will include the original code, that is going to be hashed by the identity provider and see if they match.
+The steps of the authorization code flow with PKCE are similar to the standard authorization code flow, with a few key differences.
+Before calling the authorization endpoint, the client application creates a code_verifier and hashes it. It sends this hashed version (the code_challenge) to the authorization endpoint. The idp stores the code. The next steps are similar besides the fact that the token request will include the original code, that is going to be hashed by the identity provider and see if they match.
 Summary:
 
 ![](doc/pkce1.png)
@@ -326,7 +327,7 @@ By default, identity server does not include identiy claims safe for the user id
 
 ![](doc/claimsinidentitytoken.png)
 
-So how the we obtain the user information?
+So how do we obtain the user information?
 There is a user info endpoint we can use to request additional claims. It requires an access token with scopes related to the claims that must be returned: if we want the profile information, the access token must contain the profile scope.
 The access tokens and refresh tokens can b returned from the token endpoint as well. In our flow an access token is delivered together with an identity token.
 So the flow revised (omitting the first part of the authorization code):
@@ -338,7 +339,7 @@ To get the middleware of out MVc app to call the user infor endpoint is a matter
     options.GetClaimsFromUserInfoEndpoint = true;
 ```
 
-If we inspect the token we do not see the claims but if we see the output of our mvc app and the idp, we can verify that there were requests to the user info endpoint and we can verify the information:
+If we inspect the token, we do not see the claims but if we see the output of our mvc app and the idp, we can verify that there were requests to the user info endpoint and we can verify the information:
 ![](doc/claimsidentity.png)
 
 Let's inspect the identity token and see what its fields mean.
@@ -348,14 +349,14 @@ The format of an identity token is JWT:
 1. The sub is the user identifier or "subject". it is always returned when used openidconnect.
 2. Iss means the issuer of the idenity token: URI of the identity provider.
 3. aud stands for audience, the audience for this token. In our case the client application.
-4. The nexrt four items represnet the seconds passed since January first 1970. Iat issued at. exp: expiration of the token.
+4. The next four items represent the seconds passed since January first 1970. Iat issued at. exp: expiration of the token.
 5. amr: authentication methods used.
    ![](doc/identityTokendecripted2.png)
    This can have other values like a one time password or a multi-factor authentication.
 6. nonce: number only used once. Generated at client level and it is sent back ffrom the IDP. It can be checked during token validation and helps prevent cross-site request forgery attacks.
 7. at_hash is a number used to link an access token to this specific identity token
 
-Depending on the idp used, extra claims can come with the identity token
+Depending on the idp used, extra claims can come with the identity token.
 
 ## Working with claims
 
@@ -366,7 +367,7 @@ To make sure the claim types stay the same as they come from the identity provid
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
 ```
 
-The middleware of openidconnect filter out some claims before creating the claims idenity and storing it in a cookie. Most likely claims that are not that useful. We are allowed to get the claims we want and get rid of the ones that are not necessary (keep the cookie smaller as it can be). See the example of how to configure the middleware to not filter out the audience claim, and to remove a claim from the claims identity:
+The middleware of openidconnect filters out some claims before creating the claims identity and storing them in a cookie. Most likely, claims that are not that useful. We are allowed to get the claims we want and get rid of the ones that are not necessary (keep the cookie smaller as it can be). See the example of how to configure the middleware to not filter out the audience claim, and to remove a claim from the claims identity:
 
 ```
 // done in addOpenIdConnect method
@@ -385,8 +386,7 @@ To enable RBAC we need:
 2. Add a new identity resource. Role scope is not standard of OpendIdConnect. So when a client asks for this scope, the defined claims for this scope need to be returned.
 
 ```
-
-            new IdentityResource("roles", "Your role(s)", new [] { "roles" }),
+    new IdentityResource("roles", "Your role(s)", new [] { "roles" }),
 ```
 
 3. Add roles to the allowed scope list of the client application:
@@ -400,7 +400,7 @@ To enable RBAC we need:
   },
 ```
 
-4. On the client app ask for this additional scope and appkly the mapping from the claim to the claims identity:
+4. On the client app ask for this additional scope and apply the mapping from the claim to the claims identity:
 
 ```
 options.Scope.Add("roles");
@@ -432,7 +432,7 @@ options.Scope.Add("roles");
   }
 ```
 
-This only guraties that the user that is not in that role does not see the page. But the user could navigate to it by manipulating the URL. So we have to block the access to our controllers:
+This only guaranties that the user that is not in that role does not see the page. But the user could navigate to it by manipulating the URL. So we have to block the access to our controllers:
 
 ```
         [Authorize(Roles = "PayingUser")]
@@ -453,24 +453,24 @@ This only guraties that the user that is not in that role does not see the page.
 
 ## OAuth2
 
-We've seen that OAuth2 is intended for authorization or delegated authorization o be exact: authorizing access to resources like an API. In such scenarions a client application would request an access token from an authorization server.
-Lets imagine a scenarion where a user ins involved:
+We've seen that OAuth2 is intended for authorization or delegated authorization to be exact: authorizing access to resources like an API. In such scenarios a client application would request an access token from an authorization server.
+Lets imagine a scenario where a user is involved:
 
 1. Uses are redirected to the IDP authorization endpoint.
-2. The user proves who they are by providing user name and password, for example. What happens next depended on the flow being used.
-3. What is important for now is that the client application recieves and access token to access resources the user owns. In reality the client app recieves both an identity token and an access token.
-   On every requents, the access token is sent to the APi as a bearer token.
-4. There is a limited form of validation going that uses the access token: like creating a hash from the token ti check if it matches the AT has value of the identity token.
+2. The user proves who they are by providing user name and password, for example. What happens next depends on the flow being used.
+3. What is important for now is that the client application receives an access token, to access resources the user owns. In reality, the client app receives both an identity token and an access token.
+   On every request, the access token is sent to the APi as a bearer token.
+4. There is a limited form of validation going that uses the access token: like creating a hash from the token to check if it matches the AT has value of the identity token.
 
 OnpenIdConnect superseeds OAuth2. Even when only access tokens are involved, OpendId connect is used because it provides additional claims and verification methods.
 So technically we have OpendIdConnect for authentication and authorization: some people just mention OAuth2 for authorization.
 
 ### OAuth 2 flows
 
-OAuth2 is superseed by OpendIdConnect as we have seen. OAuth2 supports Authorization code flow as well. In addition to that it supports:
+OAuth2 is superseeded by OpendIdConnect as we have seen. OAuth2 supports Authorization code flow as well. In addition to that it supports:
 
-1. Resource Owner Passowrd Crendentials flow (user is not redirected to the IDP to provide credentials, it is within the same app). It was included for legacy reasons. It is impossible to integrate with other identity providers thorugh federation because it does not involve redirection. it makes single sign-om scenarios harder and so on.
-2. Client credentials flow: no user involved. It only involded client applications, typically client ID and secret. Because it does not involve users, it is very useful for machine-to-machine communication
+1. Resource Owner Passowrd Crendentials flow (user is not redirected to the IDP to provide credentials, it is within the same app). It was included for legacy reasons. It is impossible to integrate with other identity providers through federation because it does not involve redirection. it makes single sign-on scenarios harder and so on.
+2. Client credentials flow: no user involved. It only involves client applications, typically client ID and secret. Because it does not involve users, it is very useful for machine-to-machine communication.
 
 ![](doc/OAuth2Flows.png)
 
@@ -478,13 +478,13 @@ An access token does not need to be a jwt like an identity token (it often is).
 See out access token:
 ![](doc/AccessToken1.png)
 
-The audience is not loner our client application but it is our api.
-It also has reources at our IDP level as intended audience: we pass the access token when calling the user info endpoint and that requres an access token..
-Client Id is also new and it represent the client application: on the identity token this was part of the audience array..
+The audience is not longer our client application but it is our api.
+It also has reources at our IDP level as intended audience: we pass the access token when calling the user info endpoint and that requires an access token!
+Client Id is also new and it represents the client application: on the identity token this was part of the audience array.
 The other values are the same: scopes. We have the api scope to access the api but we also have identity related information scopes:
 ![](doc/AccessToken2.png)
 When we ask the user info endpoint it will return the information mapped to those scopes.
-Lastly we also see the authentication methods.
+Lastly, we also see the authentication methods.
 
 ## Secure the API
 
@@ -498,14 +498,13 @@ It is very similar to the flow we saw before:
 4. the identity provider redirects back to the web app with the authorization code in the URI.
 5. The web application then calls the token endpoint authenticated with clientid and clientsecret, and it passes through the authorization code and the code_verifier.
 6. The identity provider hashes this and checks if it matches the stored code_challenge, only if that's the case will the IDP return tokens.
-7. We get an access token and identity token back. The identity token is validated at the level of the web client. Part of this validation is calculating the hash from the access token to see if it matches 'at' hash value in the identity token,
-   so the access token takes part in the validation procedure of the identity token.
+7. We get an access token and identity token back. The identity token is validated at the level of the web client. Part of this validation is calculating the hash from the access token to see if it matches 'at' hash value in the identity token, so the access token takes part in the validation procedure of the identity token.
 8. If validation checks out and a claims identity is created from the identity token, and that is used to sign into our ASP.NET Core MVC web application. We've also got an access token now.
 9. Optionally we can request userinfo from the user info endpoint.
-10. Because we are insterested in calling our api the access token is stored and it is sent on every request to the API as a bearer token.
+10. Because we are insterested in calling our api, the access token is stored and it is sent on every request to the API as a bearer token.
 11. The token is validated at the api.
 
-So the flow is very similar with the difference know calling the api using an access token.
+So the flow is very similar with the difference now calling the api using an access token.
 
 In order to implement that we need:
 
@@ -549,15 +548,14 @@ In order to implement that we need:
 As we can see we also have a list of api resources. So why did we add api resources and not scopes?
 
 A scope is an old OAuth2 concept. It simply means the scope of access requested by a client. So a read scope would give a client read access at the level of the api, etc
-It is a simple approach but not sufficient.~
+It is a simple approach but not sufficient.
 Resource is another concept more elaborate like a physical or logical api. In our case the image gallery api is a resource.
-In more complex system we can have many apis, or we decide to split our api into modules or "logical apis" with each having it own resource name. Each api can have scopes, that will be used for more fine-grained control:
-as an exaple image gallery.read or write.scope.
+In more complex system we can have many apis, or we decide to split our api into modules or "logical apis" with each having it own resource name. Each api can have scopes, that will be used for more fine-grained control: as an exaple image gallery.read or write.scope.
 it's not hard to imagine that different client applications that need access to our Image Gallery API are allowed different levels of access inside of that API:
 
 Whenever a scope related to a resource is requested by a client application, the access token will contain the resource as an audience value, and the scope will be in the scopes list:
 ![](doc/Apiscopes.png)
-Other apps would be similar, like a mobile app that can only have read scopes at the api. Like this, you can use these scopes to build a fine‑grained authorization layer for your AP.
+Other apps would be similar, like a mobile app that can only have read scopes at the api. Like this, you can use these scopes to build a fine‑grained authorization layer for your APP.
 So the code above will be transformed into:
 
 ```
@@ -658,10 +656,10 @@ We can access the user object from the controller class. By validating the acces
   var imagesFromRepo = await _galleryRepository.GetImagesAsync(userId); // pass the user to do the filtering in the repository
 ```
 
-We also need to protect the other actions. If a malicious user knows the URI it can delete an inage etc. Instead of repeating the previous piece of code om every actions there is a more elegant wayt to do it.
-We can even prevent the request to get to the controller action by implementing Polocies. We will learn about policies in the next section.
+We also need to protect the other actions. If a malicious user knows the URI it can delete an image etc. Instead of repeating the previous piece of code on every action there is a more elegant wayt to do it.
+We can even prevent the request to get to the controller action by implementing Policies. We will learn about policies in the next section.
 But first, we need to add identity claims to the access token too. Until know we only have scopes.
-We want to ensure aon our API the only users in the paying role can create images. Firsr, at the identity provider we need to change our api scope to include the claims role:
+We want to ensure aon our API the only users in the paying role can create images. First, at the identity provider we need to change our api scope to include the claims role:
 
 ```
     public static IEnumerable<ApiResource> ApiResources =>
@@ -706,13 +704,13 @@ Nowadays authorization policies with attribute based access control are the appr
 They allow the setup of complex rules.
 Here are the main differences between the two:
 ![](doc/Rolevspolicies.png)
-Techically a role can be an attribute of a policy. But a policy can have many attribute like: a user is allowed an action if has a certain role, lives in a certain city and was born within a certain date.
+Techically a role can be an attribute of a policy. But a policy can have many attributes like: a user is allowed an action if has a certain role, lives in a certain city and was born within a certain date.
 
 Asp.net core has built in support for policies.
 Lets add the policy of allowing the user to add an image if he was born in Belgium.
 We need to create a country claim for that. First on the identity provider. We also need to ensure our client can ask for that claim
 So we add a new identity resource country for which we will return the country claim.
-SO we need to add that information to the each user.
+So we need to add that information to the each user.
 Configure the client to ask for that claim.
 The next step is to create an authorization policy. If we want to reuse the policies on both mvc client and api we can create a class library.
 The policy will look like this:
@@ -744,7 +742,7 @@ On our layout class we are replacing the check if the user is in role with a cal
  }
 ```
 
-Protecting the action is done with the attribute as well but instead of role we referencen the policy:
+Protecting the action is done with the attribute as well but instead of role we reference the policy:
 
 ```
         [HttpPost]
@@ -823,7 +821,7 @@ The built in policies are great for simple cases. When more complex rules are re
 we can extend policies with requirements and handlers.
 Last example we decorated an api action and it ended with two attributes, one for each policy.
 All policies need to be valid. A policy has a set of requirements. So far we used built in requirements like RequireClaim, etc
-We can build custom requirements bi implementing the IAuthorizationRequirement interface.
+We can build custom requirements by implementing the IAuthorizationRequirement interface.
 There is also the concept of handlers. AutorizatonHandler<T>
 where T is of type requirement.
 If none of the requirement handlers fail and one of them returns true, the requirement is met.
@@ -1079,12 +1077,15 @@ This create a token. Now we can use --claims flag --audience flag to manipulate 
 This tool also behaves like a store. We can list all the tokens we generate. We also have options to remove from the store etc.
 
 ## Securing Javascript clients
+
 Go here..
 
 ## Managing users
-Openid connect does not directly deal with credentials. What this means, is that the means of authentication of an end user, are beyond the scope of teh standard. 
+
+Openid connect does not directly deal with credentials. What this means, is that the means of authentication of an end user, are beyond the scope of teh standard.
 The standard just specifies that a user needs to authenticate or be authenticated, before provifing proof who the user is to the client application.
 Various means of authentication exist:
+
 1. Good old user name and password
 2. Biometrics
 3. Providing a smartphone or hardware token, like an authenticator app.
@@ -1094,5 +1095,3 @@ Nowadays, it is more common using more than just one form of authentication, the
 We also need to take into account where the credentials are stored. Most of the time, locally on the identity provider with a local database. Sometimes, in other places, like for example, in active directory.
 In this case, we have active directory integration. It is common as well people having accounts in other places like google, facebook, etc that can be used to identify a person.
 So handling all these integrations is another argument to have everything handled centrally at the level of IDP. So we can add more providers, more apps, etc.
-
-
