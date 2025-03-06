@@ -1116,6 +1116,86 @@ See the initial schema:
 ![](doc/userSchema.png)
 
 Concurrency stamp helps avoiding concurrency issues while updating the users. When a user is saved the concurrency value is changed. So if updating almost at the same time it will fail because the value will not match.
-We added SQL lite and EF core as our data access layer. Out of the box identity server does not come with a user interface. We need to add it or write ourselves. How does this user interface interact with Identity server internals. It uses the IIdentityServerInteractionService. The UI assets we use come from duende itself.
+We added SQL lite and EF core as our data access layer. Out of the box, identity server does not come with a user interface. We need to add it or write ourselves. How does this user interface interact with Identity server internals? It uses the IIdentityServerInteractionService. The UI assets we use come from duende itself.
 This interface provides access to resources like the authorization request context, that will contain information about the client, redirect URI etc.
-We are already injecting it on our login page.
+We are already injecting it on our login page, together with other components like the scheme provider that gives us information about the scheme. 
+We can see as well the IdentityProviderStore that contains additional IDP integrations.
+We also see IEventService that is used to raise events like, LoginSuccessful etc. 
+The page has a method get to generate and show the login view. The BuildModelAsync fill the model to go with the view:
+```
+var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
+if (context?.IdP != null && await _schemeProvider.GetSchemeAsync(context.IdP) != null)
+{
+    var local = context.IdP == Duende.IdentityServer.IdentityServerConstants.LocalIdentityProvider;
+
+    // this is meant to short circuit the UI and only trigger the one external IdP
+    View = new ViewModel
+    {
+        EnableLocalLogin = local,
+    };
+
+    Input.Username = context.LoginHint;
+
+    if (!local)
+    {
+        View.ExternalProviders = new[] { new ViewModel.ExternalProvider ( authenticationScheme: context.IdP ) };
+    }
+
+    return;
+}
+
+```
+This piece of code here is basically a shortcut, that handles the situation we bypass the identity server and go straight to an external identity provider. So it is basically using identity server as proxy.
+When we have more than one, then the other piece of code is executed:
+```
+        var schemes = await _schemeProvider.GetAllSchemesAsync();
+
+        var providers = schemes
+            .Where(x => x.DisplayName != null)
+            .Select(x => new ViewModel.ExternalProvider
+            (
+                authenticationScheme: x.Name,
+                displayName: x.DisplayName ?? x.Name
+            )).ToList();
+
+        var dynamicSchemes = (await _identityProviderStore.GetAllSchemeNamesAsync())
+            .Where(x => x.Enabled)
+            .Select(x => new ViewModel.ExternalProvider
+            (
+                authenticationScheme: x.Scheme,
+                displayName: x.DisplayName ?? x.Scheme
+            ));
+        providers.AddRange(dynamicSchemes);
+```
+For each external provider (like google, facebook, etc) a new button gets inserted in the login page.
+The OnPost method is where the username and password combination gets checked. If all the conditions are verified, a cookie is created.
+So this interaction service is what we use, to fetch data from the http context, to check on each point of the flow we are in, etc.
+Now lets integrate with our custom user store. For the we added a LocalUserService and added it to the IoC container. We inject it on our login page and get rid of test user store.
+This service goes and fetches the data from our local database.
+We then need to use the IProfileService. This is the service that will allow us to include the user individual claims in the token. So far when we added the tests user, it would add a test user profile service to the IoC container. That is how identity server knows how to include user information.
+Our profile service (better than adding it to the cookies):
+
+```
+    public class LocalUserProfileService : IProfileService
+    {
+        private readonly ILocalUserService _localUserService;
+        public LocalUserProfileService(ILocalUserService localUserService)
+        {
+            _localUserService = localUserService;
+        }
+
+        public async Task GetProfileDataAsync(ProfileDataRequestContext context)
+        {
+            var subject = context.Subject.GetSubjectId();
+            var claims = await _localUserService.GetUserClaimsBySubjectAsync(subject);
+            context.AddRequestedClaims(claims.Select(c => new System.Security.Claims.Claim(c.Type, c.Value))); // write claims on the context
+        }
+
+        public async Task IsActiveAsync(IsActiveContext context)
+        {
+            var subject = context.Subject.GetSubjectId();
+            context.IsActive = await _localUserService.IsUserActive(subject);
+
+        }
+    }
+```
