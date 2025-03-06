@@ -826,7 +826,9 @@ There is also the concept of handlers. AutorizatonHandler<T>
 where T is of type requirement.
 If none of the requirement handlers fail and one of them returns true, the requirement is met.
 It is on those handlers more complex logic resides: like calling repo to check if a user owns an image.
+
 ![](doc/RequirementAndHandlers.png)
+
 We can build a full fledged authorization layer.
 How to create a custom policy:
 
@@ -1114,3 +1116,6 @@ See the initial schema:
 ![](doc/userSchema.png)
 
 Concurrency stamp helps avoiding concurrency issues while updating the users. When a user is saved the concurrency value is changed. So if updating almost at the same time it will fail because the value will not match.
+We added SQL lite and EF core as our data access layer. Out of the box identity server does not come with a user interface. We need to add it or write ourselves. How does this user interface interact with Identity server internals. It uses the IIdentityServerInteractionService. The UI assets we use come from duende itself.
+This interface provides access to resources like the authorization request context, that will contain information about the client, redirect URI etc.
+We are already injecting it on our login page.

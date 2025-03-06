@@ -19,8 +19,12 @@ try
     var app = builder
         .ConfigureServices()
         .ConfigurePipeline();
-    
+
     app.Run();
+}
+catch (HostAbortedException exception) 
+{
+    // so EF core add migration works
 }
 catch (Exception ex)
 {
