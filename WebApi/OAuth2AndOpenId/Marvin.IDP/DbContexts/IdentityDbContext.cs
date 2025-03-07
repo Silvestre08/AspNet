@@ -41,6 +41,7 @@ namespace Marvin.IDP.DbContexts
                     Password = "password",
                     Subject = "d860efca-22d9-47fd-8249-791ba61b07c7",
                     UserName = "David",
+                    Email = "David@gmail.com",
                     ConcurrencyStamp = new Guid("314e0d20-208f-4e3c-a131-deae789a4fdc").ToString(),
                     Active = true
                 },
@@ -50,6 +51,7 @@ namespace Marvin.IDP.DbContexts
                     Password = "password",
                     Subject = "b7539694-97e7-4dfe-84da-b4256e1ff5c7",
                     UserName = "Emma",
+                    Email = "David@gmail.com",
                     ConcurrencyStamp = new Guid("c198a000-7f99-4ef5-b4a9-8a18abab2281").ToString(),
                     Active = true
                 }); ;
