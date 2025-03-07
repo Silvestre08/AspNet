@@ -47,7 +47,7 @@ namespace Marvin.IDP.Pages.User.Registration
                 Subject = Guid.NewGuid().ToString(),
                 Password = Input.Password,                
                 Email = Input.Email,
-                Active = false
+                Active = true,
             };
 
             userToCreate.Claims.Add(new Entities.UserClaim()
