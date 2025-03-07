@@ -1199,3 +1199,24 @@ Our profile service (better than adding it to the cookies):
         }
     }
 ```
+
+## Managing users
+Thare are several approach to implement the functionality to add users, deactivate users, etc. From secutiry point of view many aproaches are valid: host the screens at the idp level, a separate app or a mixed of both..
+These are the questions to ask if we want to separate the user management:
+
+![](doc/usermanagementquestions.PNG)
+On this demo we choose to do it at the level of the identity provider.
+So lets add a link to the url of user registration.
+We create a page on the level of our identity provider. We created folder User/Registration.
+We add a new razor page and inject the necessary services. The Input model contains the properties that will be bound to the view and as such we need to build with the OnGetMethod:
+ 
+ ```
+        public IActionResult OnGet(string returnUrl)
+       {
+           BuildModel(returnUrl);
+           return Page();
+       }
+ ```
+The on post we fetch the data from the view and build a user object and store it on our local database, and we redirect it as a logged in user with access to the app.
+ ```
+ ```
