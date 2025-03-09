@@ -14,7 +14,7 @@ internal static class HostingExtensions
         // uncomment if you want to add a UI
         builder.Services.AddRazorPages();
         builder.Services.AddScoped<ILocalUserService, LocalUserService>();
-        builder.Services.AddScoped<IPasswordHasher<User>>();
+        builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         builder.Services.AddDbContext<IdentityDbContext>(options =>
         {
             options.UseSqlite(
