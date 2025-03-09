@@ -1118,10 +1118,11 @@ See the initial schema:
 Concurrency stamp helps avoiding concurrency issues while updating the users. When a user is saved the concurrency value is changed. So if updating almost at the same time it will fail because the value will not match.
 We added SQL lite and EF core as our data access layer. Out of the box, identity server does not come with a user interface. We need to add it or write ourselves. How does this user interface interact with Identity server internals? It uses the IIdentityServerInteractionService. The UI assets we use come from duende itself.
 This interface provides access to resources like the authorization request context, that will contain information about the client, redirect URI etc.
-We are already injecting it on our login page, together with other components like the scheme provider that gives us information about the scheme. 
+We are already injecting it on our login page, together with other components like the scheme provider that gives us information about the scheme.
 We can see as well the IdentityProviderStore that contains additional IDP integrations.
-We also see IEventService that is used to raise events like, LoginSuccessful etc. 
+We also see IEventService that is used to raise events like, LoginSuccessful etc.
 The page has a method get to generate and show the login view. The BuildModelAsync fill the model to go with the view:
+
 ```
 var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 if (context?.IdP != null && await _schemeProvider.GetSchemeAsync(context.IdP) != null)
@@ -1145,8 +1146,10 @@ if (context?.IdP != null && await _schemeProvider.GetSchemeAsync(context.IdP) !=
 }
 
 ```
+
 This piece of code here is basically a shortcut, that handles the situation we bypass the identity server and go straight to an external identity provider. So it is basically using identity server as proxy.
 When we have more than one, then the other piece of code is executed:
+
 ```
         var schemes = await _schemeProvider.GetAllSchemesAsync();
 
@@ -1167,6 +1170,7 @@ When we have more than one, then the other piece of code is executed:
             ));
         providers.AddRange(dynamicSchemes);
 ```
+
 For each external provider (like google, facebook, etc) a new button gets inserted in the login page.
 The OnPost method is where the username and password combination gets checked. If all the conditions are verified, a cookie is created.
 So this interaction service is what we use, to fetch data from the http context, to check on each point of the flow we are in, etc.
@@ -1201,6 +1205,7 @@ Our profile service (better than adding it to the cookies):
 ```
 
 ## Managing users
+
 Thare are several approach to implement the functionality to add users, deactivate users, etc. From secutiry point of view many aproaches are valid: host the screens at the idp level, a separate app or a mixed of both..
 These are the questions to ask if we want to separate the user management:
 
@@ -1209,14 +1214,57 @@ On this demo we choose to do it at the level of the identity provider.
 So lets add a link to the url of user registration.
 We create a page on the level of our identity provider. We created folder User/Registration.
 We add a new razor page and inject the necessary services. The Input model contains the properties that will be bound to the view and as such we need to build with the OnGetMethod:
- 
- ```
-        public IActionResult OnGet(string returnUrl)
-       {
-           BuildModel(returnUrl);
-           return Page();
-       }
- ```
-The on post we fetch the data from the view and build a user object and store it on our local database, and we redirect it as a logged in user with access to the app.
- ```
- ```
+
+```
+       public IActionResult OnGet(string returnUrl)
+      {
+          BuildModel(returnUrl);
+          return Page();
+      }
+```
+
+On the OnPost, we fetch the data from the view and build a user object and store it on our local database. After that, we redirect the user as a logged-in user with access to the app.
+
+### Safely storing passwords
+
+Passwords should be stored after being salted, hashed and key-streched.
+They should never be stored as plain text.
+A salt is a cryptographically random piece of data that is attached to the password before it is hashed.
+It means that a salt serves as additional input for a hashing function and it is stored next to the password in the database.
+Usually a cryptographically secure Pseudorandom number generator is used for this. So the salt is very unpredicatble and it protects us of Lookup table attack and rainbow table attack.
+Hashing is a one-way transformation on a password which turns the password into another string.
+Two famous hashing algorithms are SHA256/SHA512. Hashing is different that encryption.
+Encryption is a two way transformation: you can decrypt something back to its original value after having it encrypted, while a hash cannot be dehased.
+So hashing protects against the password being decrypted and a salt protects us from the aforementioned attacks:
+
+1. Lookup attack: tries to crack a hash. The idea is to compute the hashes and their respective passwords and stroring them in a dictionary or other lookup data structure that is used to search for the hash.
+2. Rainbow table: like a lookup table, but here the lookup tables are made smalller by sacrificing hash cracking speed.
+   So applying a salt will make sure that our hashed version of the password does not match the the version on the lookup tables. These tables would need to compute all combinations of hashing and salting, etc.
+
+Lastly, key stretching is a technique to discourage brute forcing a password by hashing it 1000s instead of just once.
+Imagine a scenario has our hashing password and a salt (probably have access to our database). So our application data is not secure.
+So they have the hash and the salt but not the original password. So they can brute force it: try every possible combination starting with common passworsds and compare.
+So if we hash a 1000 times instead of one, it will take 1 or 2 seconds. That means it will take 1 or 2 seconds for the attacker to compute each comnbination. With millions possible combinations...
+That means the user loggin in will take those 2 seconds but that is ok.
+PBKDF2 and Argon 2 implement key stretching/ key derivation. The process looks like this:
+
+![](doc/PBKF2.png)
+As computer power goes up, more iterations will be needed and, of course, keeping up to date with security practices.
+Accomplish this in ASP.NET core is actually simple:
+
+We need to inject the IPasswordHasher interface in our local user service:
+
+```
+            userToAdd.Password = _passwordHasher.HashPassword(userToAdd, password);
+```
+
+We can look into the code in the ASP.Net core repo, but here it is some information about it:
+
+![](doc/passwordhasher.png)
+
+We also need to verify the password now against the hased version:
+
+```
+            var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+            return verificationResult == PasswordVerificationResult.Success;
+```
