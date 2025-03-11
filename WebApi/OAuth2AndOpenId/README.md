@@ -1268,3 +1268,78 @@ We also need to verify the password now against the hased version:
             var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
             return verificationResult == PasswordVerificationResult.Success;
 ```
+
+### Activating accounts
+
+When activating accounts is good practice to verify that the e-mail is unique.
+E-mail becomes a central piece on itegrations with federated other federated services.
+The activation flow is simple:
+
+We will generate an activation link with expiration date of one hour. The idea is to send an email so the user can click on that link.
+While registering the user, we generate an activation code and store it in the database, along with the expiration date. When the user clicks on the link it will need to pass the code.
+For that we need another page as well. The page the user will be redirected when clicking on that link: verify folder /user/activation.
+We add this code while adding a user:
+
+```
+            if (_context.Users.Any(u => u.Email == userToAdd.Email))
+            {
+                // in a real-life scenario you'll probably want to
+                // return this as a validation issue
+                throw new Exception("Email must be unique");
+            }
+
+            userToAdd.SecurityCode = Convert.ToBase64String(RandomNumberGenerator.GetBytes(128));
+            userToAdd.SecurityCodeExpirationDate = DateTime.UtcNow.AddHours(1);
+```
+
+On the local user service we also added the following code:
+
+```
+public async Task<bool> ActivateUserAsync(string securityCode)
+{
+    if (string.IsNullOrWhiteSpace(securityCode))
+    {
+        throw new ArgumentNullException(nameof(securityCode));
+    }
+
+    // find an user with this security code as an active security code.
+    var user = await _context.Users.FirstOrDefaultAsync(u =>
+        u.SecurityCode == securityCode &&
+        u.SecurityCodeExpirationDate >= DateTime.UtcNow);
+
+    if (user == null)
+    {
+        return false;
+    }
+
+    user.Active = true;
+    user.SecurityCode = null; //subsequent requests will fail because the user will already be active
+    return true;
+}
+```
+
+Because we do not have yet an email server configured, we can use this to simulate the action of clicking the url that is generated here:
+
+```
+            var activationLink = Url.PageLink("/user/activation/index",
+                values: new { securityCode = userToCreate.SecurityCode });
+                 Debug.WriteLine($"Activation link: {activationLink}"); // log it on the console so we can click it
+```
+
+We commented out the code to sign in the user and generate the cookie because we want to do that when the user is active.
+We instead redirect to a page that urges the user to check their e-mail:
+
+```
+return Redirect("~/User/ActivationCodeSent");
+```
+
+Then on our console log we see a generated link that would show up on the email, that send the code as a query parameter:
+https://localhost:5001/User/Activation?securityCode=MUdPO4%2BK0mD7tPe5CYep5hD5NofZxv7KnmaQE9Ww9qNYAyxdx756fQ16txjTx09WKv6hITHS%2BVUpo7cdt%2FA17slqhTt7X6n8n8iBWBXfQBKVegyHjrOnZnz5PfxcSHOR3d0uzirtkCQyUa4kihYQkArMQIXUWY68hhsOeSvbTxs%3D
+
+Some tips on IAM systems
+Some IAM systems are different than others. Some allow users to manage their profile information.
+If we do that, it is good practice to verify the email before starting using it by sending a confirmation link with a token.
+Consider implement resend link functionality because as we have seen, codes expire and links need to be resent.
+For password resets, identity must be verified first of course, before allowing the user to change their password (common questions should be avoided).
+Implement blocking out users after unsuccessful login attempts, Probably not a good idea to lock out forever because we need a recovery mechanism.
+Even locking out for a few minutes may cause a DoS attack, when the attacker disables hundreds of accounts. Key stretching like we did is an effective way to discourage brute force already. Adding a captcha is also a good way.
