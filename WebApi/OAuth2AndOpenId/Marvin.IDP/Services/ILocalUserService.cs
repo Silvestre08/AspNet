@@ -1,4 +1,5 @@
 ﻿using Marvin.IDP.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Marvin.IDP.Services
 {
@@ -22,6 +23,8 @@ namespace Marvin.IDP.Services
 
         Task<bool> IsUserActive(
             string subject);
+
+        Task<bool> ActivateUserAsync(string securityCode);
 
         Task<bool> SaveChangesAsync();
     }
