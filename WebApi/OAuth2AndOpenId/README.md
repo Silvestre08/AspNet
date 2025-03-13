@@ -1343,3 +1343,109 @@ Consider implement resend link functionality because as we have seen, codes expi
 For password resets, identity must be verified first of course, before allowing the user to change their password (common questions should be avoided).
 Implement blocking out users after unsuccessful login attempts, Probably not a good idea to lock out forever because we need a recovery mechanism.
 Even locking out for a few minutes may cause a DoS attack, when the attacker disables hundreds of accounts. Key stretching like we did is an effective way to discourage brute force already. Adding a captcha is also a good way.
+
+A note on passwords: longer passwords are better than small passwords with special characters. Forcing the user to change regularly may be not the best idea because most users use variations of the same password.
+So, what are good practices? This picture summarizes it:
+![](doc/passwordgoodpractices.png)
+
+## Integration with AD and other social logins
+
+A user might have account with credentials in many placesÇ
+
+1. locally
+2. Windows credentials
+3. Microsoft Entra ID credentials
+4. Social credentials
+
+Users like to use the same account to log in everywhere. When to handle these integrations\_
+It is not a good idea to handle that in the client application.
+We would need to work around the fact a user can have facebook account and a local account on our identity server integration (we would end up with repeated users).
+The other issue is that the claims might be different between providers, so we would need an extra layer of mappping.
+Or we can have claims that do not exist on facebook at all.
+SO the logic to handle this can be centralized and it is complex to have the client handle it.
+So we do it at the IDP level. Remember: client only needs proof of identity.
+
+### Windows authentication
+
+In this scenario we are using corporate network's active directory domain identiy.
+It is around for ages.
+This one does not cover OAuth2 and OpendIdConnect.
+It is better for intranet environments.
+Credentials are not stored in our IDO but on active directory.
+Windows authentication follows this sequence of steps:
+
+![](doc/windowsAuthenticationSteps.png)
+
+These messages, negotiation, challenge means that we are using NTLM protocol.
+It is a proprietary authentication protocol from Microsoft. NT LAN MAN. Nt stands for windows NT.
+This is one of the ways to achieve windows authentications. IIS uses this protocol but alternative protocol called Kerberos can be used.
+The clients identity is proven with this challenge response.
+Identity server supports windows aurthentication when it is hosted in Kestrel on windows with IIS and the IIS integration packages or HTTP.sys.
+First, we need to add a iis profile on our launchSettings.json.
+We need to host the application using iss. So we need to add some settings as well:
+
+```
+  "iisSettings": {
+    "windowsAuthentication": true,
+    "anonymousAuthentication": true, // requests to the discovery document are anonymous so without this our provider would not work
+    "iisExpress": {
+      "applicationUrl": "https://localhost:44300",
+      "sslPort": 44300 // when running on SSL in IIS ports must be between 44300 and 44399
+    }
+  }
+```
+
+By changing the port we run the app, because it is imposed on us because of iss, we need to change the authority on our api and client application.
+Under windows folder, we created a page for windows authentication:
+
+```
+            // see if windows auth has already been requested and succeeded
+            var result = await HttpContext.AuthenticateAsync("Windows");
+            if (result?.Principal is WindowsPrincipal wp)
+            {
+                // beware the performance penalty for loading these group claims
+                var wi = wp.Identity as WindowsIdentity;
+                var groups = wi.Groups.Translate(typeof(NTAccount));
+                var roles = groups.Select(x => new Claim(JwtClaimTypes.Role, x.Value));
+
+                var user = new IdentityServerUser(wp.FindFirst(ClaimTypes.PrimarySid).Value)
+                {
+                    IdentityProvider = "Windows",
+                    DisplayName = wp.Identity.Name,
+                    AdditionalClaims = roles.ToList(),
+                };
+
+                await HttpContext.SignInAsync(user);
+                return LocalRedirect(returnUrl);
+            }
+            else
+            {
+                // trigger windows auth, the first time we follow in this challenge code
+                // since windows auth don't support the redirect uri,
+                // this URL is re-triggered when we call challenge
+                return Challenge("Windows");
+            }
+```
+
+1. First we fall on the challenge.
+2. Second, after the challenge, the page reloads, and we authenticate the windows principals.
+3. Identity server user is created.
+4. The we sign and create local cookie and we then are signed on the the identity server.
+
+Before getting things ready we need to have a way to show on the UI windows authentication. On the login page, we see the identity server renders ui elements for all external providers.
+So we need to add windows authentication to the hosting extensions:
+
+```
+        // configures IIS out-of-proc settings
+        builder.Services.Configure<IISOptions>(iis =>
+        {
+            iis.AuthenticationDisplayName = "Windows";
+            iis.AutomaticAuthentication = false;
+        });
+        // ..or configures IIS in-proc settings
+        builder.Services.Configure<IISServerOptions>(iis =>
+        {
+            iis.AuthenticationDisplayName = "Windows";
+            iis.AutomaticAuthentication = false; // authentication goes through the custom code we just added.
+        });
+```

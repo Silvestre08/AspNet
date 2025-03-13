@@ -1,11 +1,9 @@
+using ImageGallery.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.Net.Http.Headers;
-using Duende.IdentityModel.Client;
-using ImageGallery.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +21,7 @@ builder.Services.AddHttpClient("APIClient", client =>
 }).AddUserAccessTokenHandler();
 builder.Services.AddHttpClient("IDPClient", client =>
 {
-    client.BaseAddress = new Uri("https://localhost:5001");
+    client.BaseAddress = new Uri("https://localhost:44300");
 });
 
 JsonWebTokenHandler.DefaultInboundClaimTypeMap.Clear();
@@ -40,7 +38,7 @@ builder.Services.AddAuthentication(options =>
 .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options => 
 {
     options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.Authority = "https://localhost:5001/";
+    options.Authority = "https://localhost:44300/";
     options.ClientId = "imagegalleryclient";
     options.ClientSecret = "secret";
     options.ResponseType = "code";
