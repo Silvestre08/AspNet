@@ -1449,3 +1449,25 @@ So we need to add windows authentication to the hosting extensions:
             iis.AutomaticAuthentication = false; // authentication goes through the custom code we just added.
         });
 ```
+When we execute the code we developed so far, we get automatically redirected to ExternalLogin/Challenge. It means identity server is handling windows authentication as any other external means authentication. We want to redirect to our windows lage we just created.
+so on the login page, on the section we render the buttons for the external providers, we add the redirection in case of windows authentication:
+```
+            @if (provider.AuthenticationScheme == "Windows")
+
+
+
+            {
+                                                        <a class="btn btn-secondary"
+                   asp-page="/Windows/Index"
+                   asp-route-scheme="@provider.AuthenticationScheme"
+                   asp-route-returnUrl="@Model.Input.ReturnUrl">
+                    @provider.DisplayName
+                </a>
+                }
+                                    
+```
+We will notice this is not enough. We are checking on our profile service if a user is active. The subject Id of our windows user in to on our local user store yet.
+All windows users have a primarySId and that is what we are using as a value for the subject when we create the IdentityServerUser object.
+What we need to do is to implement account and user linking, which we will do in the module HEEEERE.
+
+### Federation
