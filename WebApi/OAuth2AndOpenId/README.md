@@ -1449,8 +1449,10 @@ So we need to add windows authentication to the hosting extensions:
             iis.AutomaticAuthentication = false; // authentication goes through the custom code we just added.
         });
 ```
-When we execute the code we developed so far, we get automatically redirected to ExternalLogin/Challenge. It means identity server is handling windows authentication as any other external means authentication. We want to redirect to our windows lage we just created.
-so on the login page, on the section we render the buttons for the external providers, we add the redirection in case of windows authentication:
+
+When we execute the code we developed so far, we get automatically redirected to ExternalLogin/Challenge. It means identity server is handling windows authentication as any other external means of authentication. We want to redirect to our windows page we just created.
+So on the login page, on the section we render the buttons for the external providers, we add the redirection in case of windows authentication:
+
 ```
             @if (provider.AuthenticationScheme == "Windows")
 
@@ -1464,10 +1466,23 @@ so on the login page, on the section we render the buttons for the external prov
                     @provider.DisplayName
                 </a>
                 }
-                                    
+
 ```
+
 We will notice this is not enough. We are checking on our profile service if a user is active. The subject Id of our windows user in to on our local user store yet.
 All windows users have a primarySId and that is what we are using as a value for the subject when we create the IdentityServerUser object.
 What we need to do is to implement account and user linking, which we will do in the module HEEEERE.
 
 ### Federation
+
+The windows authentication apperar often on enterprise scenarios. Lately, Azure active directory as well (or entra id).
+But for other apps, there are plenty of of other providers: users have facebook accounts, google, etc and like to use those accounts to log in in many applications.
+This is the concept of federation: it shifts a lot of IAM complexities to a third party IDP. This also entails linking user identities.
+Identity server can easily do that.
+So our client app needs an identity token, so the user needs to be signed at the level of our IDP. So our client asks the IDP and the IDP will ask facebook for example. It will validate the token that came from facebook and it will validate and it will use to authenticate the user.
+The protocol used by the third-party provider can vary: it can use openId as well, or SAML like active directory, etc.
+
+### Integrating with facebook
+
+On the external login folder we have two pages: Challenge and Callback.
+We also had that with windows authentication. The idea behind the challenging a scheme linked to an external identity provider is that it initiate the round trip to that identity provider. Once we come back from that idenity provider, we need to process the result, and that is done on the callback page. The rest of the flow is handled by the middleware.
