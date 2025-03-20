@@ -1482,7 +1482,58 @@ Identity server can easily do that.
 So our client app needs an identity token, so the user needs to be signed at the level of our IDP. So our client asks the IDP and the IDP will ask facebook for example. It will validate the token that came from facebook and it will validate and it will use to authenticate the user.
 The protocol used by the third-party provider can vary: it can use openId as well, or SAML like active directory, etc.
 
-### Integrating with facebook
+On the external login folder of our identity provider project we have two pages: Challenge and Callback.
+We also had that with windows authentication. The idea behind the challenging a scheme linked to an external identity provider is that it initiates the round trip to that identity provider. Once we come back from that idenity provider, we need to process the result, and that is done on the callback page. The rest of the flow is handled by the middleware.
 
-On the external login folder we have two pages: Challenge and Callback.
-We also had that with windows authentication. The idea behind the challenging a scheme linked to an external identity provider is that it initiate the round trip to that identity provider. Once we come back from that idenity provider, we need to process the result, and that is done on the callback page. The rest of the flow is handled by the middleware.
+The OnGet of the challenge page accepts a scheme name and a return url of course. it returns a challenge result: the result of asp.net core authentication managener challenge command, or, the built in authentication of asp.net core.
+Challenge is part of controller base and by calling the "scheme" name is challenged: whatever middleware we defined that matches the provider name as scheme will be triggered.
+In the code we see we can send the authentication properties to the challenge method: the scheme and the return URL. These properties we want them back on our callback page, the page we are in after the round trip to the external identity provider.
+This is very similar to the flow we have of our client app and identity provider. Now, our idenity provider is like the "client" of the external idenity provider.
+Now looking into our callback page OnGet method:
+
+```
+      var result = await HttpContext.AuthenticateAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
+      if (result.Succeeded != true)
+      {
+          throw new InvalidOperationException($"External authentication error: { result.Failure }");
+      }
+```
+First, we get the user from the temporary cookie. That cookie was created by the middleware that matches the scheme that was triggered in the previous step. So we will have an Azure AD, or facebbok scheme, that will result in middleware being triggered that will result in writting this cookie.
+After we will try to find the claims. How that is done will depend on the external provider (need to search the claim names of the external provider).
+
+```
+        CaptureExternalLoginContext(result, additionalLocalClaims, localSignInProps);
+```
+On very common thing to do is to store the identiy cookie that comes from the external idenity provider, so it can be used to automate signing out. Then idenity server user is created, etc. and we use to sign to our local idp. So at this point we can delete the tempory cookie because we do not need it anymore.
+```
+        // delete temporary cookie used during external authentication
+        await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
+```
+
+### Integrating with Azure Ad
+Azure AD our Entra Id is part of microsoft enterprise identity service with signle sign-on, multi factor authentication.
+Assuming an active directory already exists, the first step is to create an app registration, on the app registration menu:
+
+![](doc/azureAppRegistration.PNG)
+
+So we need to tell it is a web application and the redirect link: so our app is running on our localhost 44300 and this what we configure:
+
+![](doc/AzureRedirect.PNG)
+
+We can continue the configuration and configure the front-channel logout URL, to redirect to our identity provider and cleanup session, etc
+
+![](doc/azureNoImplicit.PNG)
+
+We do not want implicit grant. Recalling the authorization code flow we do not issue access tokens directly from the authorization endpoint.
+The next step is to add a secret. For web apps, client authentication should be enabled.
+On the menu of certificates and secrets we create a new secret and note it.
+We can add permissions too. As default we are allowed to read the user profile from the Microsoft Graph. We can also request permissions to a set of microsoft apis or even our our apis, in case we have both.
+By clicking on microsoft graph we can request addtionql permissions. We can see some standar openId permissions:
+
+![](doc/AzureOpenIdPermissions.PNG)
+We selected all open id permissions.
+
+On the overview page, we see the Azure created an unique client Id for our application.
+
+We also are going need our tenant Id, so our IDP know which instance of AD to use.
+### Integrating with facebook
