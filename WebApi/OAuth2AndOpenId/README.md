@@ -1528,12 +1528,17 @@ We do not want implicit grant. Recalling the authorization code flow we do not i
 The next step is to add a secret. For web apps, client authentication should be enabled.
 On the menu of certificates and secrets we create a new secret and note it.
 We can add permissions too. As default we are allowed to read the user profile from the Microsoft Graph. We can also request permissions to a set of microsoft apis or even our our apis, in case we have both.
-By clicking on microsoft graph we can request addtionql permissions. We can see some standar openId permissions:
+By clicking on microsoft graph we can request addtional permissions. We can see some standard openId permissions:
 
 ![](doc/AzureOpenIdPermissions.PNG)
 We selected all open id permissions.
 
 On the overview page, we see the Azure created an unique client Id for our application.
-
 We also are going need our tenant Id, so our IDP know which instance of AD to use.
+
+So lets navigate to the endpoints tab and on there we can see a list of all the urls. All of them have on their url the tenant id we noted down.
+We can have a look into the open id connect metadata document and fetcht he issuer: 
+![](doc/metadataEndpoint.PNG)
+We are going to need the issuer.
+
 ### Integrating with facebook
