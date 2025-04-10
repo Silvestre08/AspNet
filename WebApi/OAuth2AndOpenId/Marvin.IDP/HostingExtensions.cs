@@ -53,7 +53,7 @@ internal static class HostingExtensions
         options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
         options.Authority = "https://login.microsoftonline.com/f8a7776d-cf97-4e79-8533-5df1cede27f3/v2.0";
         options.ClientId = "2bf03263-4686-4a26-950f-395a40036451";
-        options.ClientSecret = Environment.GetEnvironmentVariable("AzureAdSecret");
+        options.ClientSecret = builder.Configuration["AzureAdSecret"];
         options.ResponseType = "code";
         options.CallbackPath = new PathString("/signin-aad/");
         options.SignedOutCallbackPath = new PathString("/signout-aad/");
