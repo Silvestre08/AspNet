@@ -1,3 +1,4 @@
+using Duende.IdentityServer;
 using Marvin.IDP.DbContexts;
 using Marvin.IDP.Entities;
 using Marvin.IDP.Services;
@@ -43,7 +44,30 @@ internal static class HostingExtensions
             .AddInMemoryApiResources(Config.ApiResources)
             .AddInMemoryClients(Config.Clients)
             .AddProfileService<LocalUserProfileService>();
-            //.AddTestUsers(TestUsers.Users);
+        //.AddTestUsers(TestUsers.Users);
+
+        builder.Services
+    .AddAuthentication()
+    .AddOpenIdConnect("AAD", "Azure Active Directory", options =>
+    {
+        options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
+        options.Authority = "https://login.microsoftonline.com/f8a7776d-cf97-4e79-8533-5df1cede27f3/v2.0";
+        options.ClientId = "2bf03263-4686-4a26-950f-395a40036451";
+        options.ResponseType = "code";
+        options.CallbackPath = new PathString("/signin-aad/");
+        options.SignedOutCallbackPath = new PathString("/signout-aad/");
+        options.Scope.Add("email");
+        options.Scope.Add("offline_access");
+        options.SaveTokens = true;
+    });
+       // builder.Services.AddAuthentication().AddFacebook(
+       //"Facebook",
+       //options =>
+       //{
+       //    options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme;
+       //    options.AppId = "864396097871039";
+       //});
+
 
         return builder.Build();
     }
