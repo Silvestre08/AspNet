@@ -1555,7 +1555,7 @@ Now we need to configure the services to integrate with Entra Id at the level of
         options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme; // the scheme that will be used to store the result of the authentication
         options.Authority = "https://login.microsoftonline.com/621cb4b2-eeb8-4699-913d-a651c392babd/v2.0";
         options.ClientId = "df55658d-e228-4f72-9f11-b60334edb0e2"; // the client of the app we registered in active directory
-        options.ClientSecret = "";
+        options.ClientSecret = ""; // git hub blocks the push so we included the secret using dotnet secrets
         options.ResponseType = "code";
         options.CallbackPath = new PathString("/signin-aad/");
         options.SignedOutCallbackPath = new PathString("/signout-aad/");
