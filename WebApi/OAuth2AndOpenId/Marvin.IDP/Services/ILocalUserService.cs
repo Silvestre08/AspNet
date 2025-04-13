@@ -1,5 +1,6 @@
 ﻿using Marvin.IDP.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace Marvin.IDP.Services
 {
@@ -25,6 +26,17 @@ namespace Marvin.IDP.Services
             string subject);
 
         Task<bool> ActivateUserAsync(string securityCode);
+
+        Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey);
+
+        User AutoProvisionUser(string provider, string providerIdentityKey, IEnumerable<Claim> claims, string email ="");
+
+        Task<User> GetUserByEmailAsync(string email);
+
+        Task AddExternalProviderToUser(
+                  string subject,
+                  string provider,
+                  string providerIdentityKey);
 
         Task<bool> SaveChangesAsync();
     }

@@ -1629,3 +1629,124 @@ This class links our user to a user in an external IDP. 2. Add a collection of u
 ### Provisioning a federated identiy
 
 So far we linked Entra id and facebook. But we did not have a local user for that. So, on our callback page we are going to create a user without a password (the password is managed by the Entra ID).
+We basically need to check if the user already exists on our local database. If it doesn't exist, we need to create it. We also need to grab the claims from the external IDP. So we can now on our callback page returning the claims principal with our user id.
+In order to accomplish all of this, we changed the local user service and added the following these two methods:
+
+```
+        public async Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey)
+        {
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            var userLogin = await _context.UserLogins.Include(ul => ul.User)
+                .FirstOrDefaultAsync(ul => ul.Provider == provider && ul.ProviderIdentityKey == providerIdentityKey);
+
+            return userLogin?.User;
+        }
+
+        public User AutoProvisionUser(string provider,
+    string providerIdentityKey,
+    IEnumerable<Claim> claims)
+        {
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            if (claims is null)
+            {
+                throw new ArgumentNullException(nameof(claims));
+            }
+
+            var user = new User()
+            {
+                Active = true, // some variations exist like to send activation email
+                Subject = Guid.NewGuid().ToString()
+            };
+            foreach (var claim in claims)
+            {
+                user.Claims.Add(new UserClaim()
+                {
+                    Type = claim.Type,
+                    Value = claim.Value
+                });
+            }
+            user.Logins.Add(new UserLogin()
+            {
+                Provider = provider,
+                ProviderIdentityKey = providerIdentityKey
+            });
+
+            _context.Users.Add(user);
+            return user;
+        }
+
+
+
+```
+
+Those two methods allow us to provision a user based on the external user of the identity provider.
+The next step we need to implement is Claims Transformation.
+
+### Claims transformation
+
+Usually, external identity providers likes facebook and entra id do not have the claims we are working on with on our applications. For example, our client application is realying on claims like roles, given_name, etc. Claims transformation is the process of adapting the external users to the needs of our applications.
+One of the easiest way for mappings is to create dictionaries:
+
+```
+    private readonly Dictionary<string, string> _facebookClaimTypeMap = new()
+        {
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+            JwtClaimTypes.GivenName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+            JwtClaimTypes.FamilyName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            JwtClaimTypes.Email}
+        };
+
+```
+
+For additional claims not present on the dictionary, like country and role, we would need to create an additional view, with the returnUrl passed through to include that.
+For now we are just going to use hardcoded values:
+
+```
+var mappedClaims = new List<Claim>();
+// map the claims, and ignore those for which no
+// mapping exists
+foreach (var claim in claims)
+{
+    if (_facebookClaimTypeMap.ContainsKey(claim.Type))
+    {
+        mappedClaims.Add(
+            new Claim(_facebookClaimTypeMap[claim.Type],
+            claim.Value));
+    }
+}
+mappedClaims.Add(new Claim("role", "FreeUser"));
+mappedClaims.Add(new Claim("country", "be"));
+
+// auto-provision the user
+user = _localUserService.AutoProvisionUser(
+    provider, providerUserId, mappedClaims.ToList());
+await _localUserService.SaveChangesAsync();
+```
+
+We can do many things here: we might want to update claims from the external idp on our database at regular intervals, additional checks on the key to identify duplicates.
+
+There are variations to this flow. One we already talked: ask for additional information, like roles, country etc.
+Another one is to require a user to choose a local password / local means of authentication.
+It is also not uncommon to activate the account via activation link.
+We can put more or less trust on the external provider.
+Another use case on user provisioning is to link an external account to an existing user. We did that for our Entra ID to show the concepts.

@@ -19,7 +19,6 @@ namespace Marvin.IDP.Entities
         [Required]
         public string ProviderIdentityKey { get; set; } // key of the user at the level of the external IDP
 
-
-        public string ConcurrencyStamp { get; set; }
+        public string ConcurrencyStamp { get; set; } = Guid.NewGuid().ToString();
     }
 }
