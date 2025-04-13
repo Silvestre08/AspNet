@@ -7,6 +7,7 @@ using Duende.IdentityServer.Events;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Test;
 using IdentityModel;
+using Marvin.IDP.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,15 +22,18 @@ public class Callback : PageModel
     private readonly IIdentityServerInteractionService _interaction;
     private readonly ILogger<Callback> _logger;
     private readonly IEventService _events;
+    private readonly ILocalUserService _localUserService;
 
     public Callback(
         IIdentityServerInteractionService interaction,
         IEventService events,
+        ILocalUserService localUserService,
         ILogger<Callback> logger)
     {
         _interaction = interaction;
         _logger = logger;
         _events = events;
+        _localUserService = localUserService;
     }
         
     public async Task<IActionResult> OnGet()

@@ -1590,3 +1590,42 @@ To link identities we need some sort of key that exists in both systems and that
 So we need to make sure whatever the key is is correctly verified. IT is on it the reliability of federated identity relies.
 In enterprise environments with many integrations might be common to not find the key and some process needs to be done manually (lists of users).
 This is part of the user provisioning process: ensure the user is created, changed, disabled, deleted and givent he claims permissions they need.
+
+Lets start integrate our users. We need to keep track of all the external logins into our users. For that we:
+
+1. Create a user login class like so:
+
+```
+using System.ComponentModel.DataAnnotations;
+
+namespace Marvin.IDP.Entities
+{
+    public class UserLogin : IConcurrencyAware
+    {
+        [Key]
+        public Guid Id { get; set; }
+
+        public Guid UserId { get; set; }
+
+        public User User { get; set; }
+
+        [MaxLength(200)]
+        [Required]
+        public string Provider { get; set; } // external provider reference to link our user.
+
+        [MaxLength(200)]
+        [Required]
+        public string ProviderIdentityKey { get; set; } // key of the user at the level of the external IDP
+
+
+        public string ConcurrencyStamp { get; set; }
+    }
+}
+
+```
+
+This class links our user to a user in an external IDP. 2. Add a collection of user logins into our user. We also made nullable password and some other fields so users may not have on our local. 3. Add migrations.
+
+### Provisioning a federated identiy
+
+So far we linked Entra id and facebook. But we did not have a local user for that. So, on our callback page we are going to create a user without a password (the password is managed by the Entra ID).
