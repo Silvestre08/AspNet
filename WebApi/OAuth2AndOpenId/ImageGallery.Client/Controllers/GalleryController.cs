@@ -35,6 +35,7 @@ namespace ImageGallery.Client.Controllers
             var response = await httpClient.SendAsync(
                 request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
 
+
             response.EnsureSuccessStatusCode();
 
             using (var responseStream = await response.Content.ReadAsStreamAsync())

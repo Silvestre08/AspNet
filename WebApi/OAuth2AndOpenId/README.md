@@ -329,7 +329,7 @@ By default, identity server does not include identiy claims safe for the user id
 
 So how do we obtain the user information?
 There is a user info endpoint we can use to request additional claims. It requires an access token with scopes related to the claims that must be returned: if we want the profile information, the access token must contain the profile scope.
-The access tokens and refresh tokens can b returned from the token endpoint as well. In our flow an access token is delivered together with an identity token.
+The access tokens and refresh tokens can be returned from the token endpoint as well. In our flow an access token is delivered together with an identity token.
 So the flow revised (omitting the first part of the authorization code):
 ![](doc/accessTokenandIdentity.png)
 ![](doc/accessTokenandIdentity2.png)
@@ -1750,3 +1750,6 @@ Another one is to require a user to choose a local password / local means of aut
 It is also not uncommon to activate the account via activation link.
 We can put more or less trust on the external provider.
 Another use case on user provisioning is to link an external account to an existing user. We did that for our Entra ID to show the concepts.
+Once we have all the necessary claims on our side we can log in into our apps. Notes: be mindfull of the requirements like refrsh tokens on integrating with other identity providers.
+
+There are other possible flows of course. We so far implemented automatic linking between acconts but we may have a profile page where the user manually links accounts or asking the user if they want to link if we detect a potential match.s
