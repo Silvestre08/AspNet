@@ -1753,3 +1753,15 @@ Another use case on user provisioning is to link an external account to an exist
 Once we have all the necessary claims on our side we can log in into our apps. Notes: be mindfull of the requirements like refrsh tokens on integrating with other identity providers.
 
 There are other possible flows of course. We so far implemented automatic linking between acconts but we may have a profile page where the user manually links accounts or asking the user if they want to link if we detect a potential match.s
+
+## Multi-factor authentication
+
+It is the identification of user by means of the combinatior of two or different factors. A factor is a type of communication: like password, authenticaton app, etc
+
+### One time password
+
+We generate a one time password and send it to an email, for example. But this is not a true MFA. We need something we know and something we have (something we know is our password, something we have is our finger).
+The Organization NIST states that tje ability to receive an email message does not generally prove the possesion of a specific device.
+It is better than nothing when no alternative is available.
+Let's use an authenticato app: considered soft OTP implementation.
+It generates an OTP on the device.
