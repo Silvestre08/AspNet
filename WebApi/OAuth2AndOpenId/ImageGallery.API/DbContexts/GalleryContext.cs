@@ -113,7 +113,14 @@ namespace ImageGallery.API.DbContexts
                     Title = "An image by Emma",
                     FileName = "fdfe7329-e05c-41fb-a7c7-4f3226d28c49.jpg",
                     OwnerId = "b7539694-97e7-4dfe-84da-b4256e1ff5c7"
-                });
+                },
+            new Image()
+            {
+                Id = new Guid("2d51ebee-f9ed-4335-8fb2-b6e63bae250d"),
+                Title = "An image by celso",
+                FileName = "fdfe7329-e05c-41fb-a7c7-4f3226d28c49.jpg",
+                OwnerId = "AAC8CD3F-E3AA-4BA5-988C-649C1B586387"
+            });
 
             base.OnModelCreating(modelBuilder);
         }

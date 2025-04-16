@@ -7,6 +7,7 @@ using Duende.IdentityServer.Events;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Test;
 using IdentityModel;
+using Marvin.IDP.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,15 +22,28 @@ public class Callback : PageModel
     private readonly IIdentityServerInteractionService _interaction;
     private readonly ILogger<Callback> _logger;
     private readonly IEventService _events;
+    private readonly ILocalUserService _localUserService;
+
+    private readonly Dictionary<string, string> _facebookClaimTypeMap = new()
+        {
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+            JwtClaimTypes.GivenName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+            JwtClaimTypes.FamilyName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            JwtClaimTypes.Email}
+        };
 
     public Callback(
         IIdentityServerInteractionService interaction,
         IEventService events,
+        ILocalUserService localUserService,
         ILogger<Callback> logger)
     {
         _interaction = interaction;
         _logger = logger;
         _events = events;
+        _localUserService = localUserService;
     }
         
     public async Task<IActionResult> OnGet()
@@ -62,6 +76,77 @@ public class Callback : PageModel
         var providerUserId = userIdClaim.Value;
 
         // find external user
+        var user = await _localUserService.FindUserByExternalProviderAsyn(provider, providerUserId);
+        
+        if(user == null) 
+        {
+            // remove the userid claim: that information is
+            // stored in the UserLogins table
+            var claims = externalUser.Claims.ToList();
+            claims.Remove(userIdClaim);
+
+            // different external login providers often require different
+            // ways of handling 
+            // provisioning / linking
+            if (provider == "AAD")
+            {
+                // get email claim value
+                var emailFromAzureAD = externalUser.Claims
+                  .FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
+
+                if (!string.IsNullOrEmpty(emailFromAzureAD))
+                {
+                    // try to find a user with matching email
+                    user = await _localUserService
+                        .GetUserByEmailAsync(emailFromAzureAD);
+
+                    // if it exists, add AAD as a provider
+                    if (user != null)
+                    {
+                        await _localUserService.AddExternalProviderToUser(
+                            user.Subject, provider, providerUserId);
+                        await _localUserService.SaveChangesAsync();
+                    }
+                    else 
+                    {
+                        var mappedClaims = new List<Claim>();
+
+                        mappedClaims.Add(new Claim("role", "FreeUser"));
+                        mappedClaims.Add(new Claim("country", "be"));
+
+                        // auto-provision the user
+                        user = _localUserService.AutoProvisionUser(
+                            provider, providerUserId, mappedClaims.ToList(), emailFromAzureAD);
+                        await _localUserService.SaveChangesAsync();
+                    }
+
+                }
+            }
+            else if (provider == "Facebook")
+            {
+                var mappedClaims = new List<Claim>();
+                // map the claims, and ignore those for which no
+                // mapping exists
+                foreach (var claim in claims)
+                {
+                    if (_facebookClaimTypeMap.ContainsKey(claim.Type))
+                    {
+                        mappedClaims.Add(
+                            new Claim(_facebookClaimTypeMap[claim.Type],
+                            claim.Value));
+                    }
+                }
+                mappedClaims.Add(new Claim("role", "FreeUser"));
+                mappedClaims.Add(new Claim("country", "be"));
+
+                // auto-provision the user
+                user = _localUserService.AutoProvisionUser(
+                    provider, providerUserId, mappedClaims.ToList());
+                await _localUserService.SaveChangesAsync();
+            }
+        }
+
+        
         //var user = _users.FindByExternalProvider(provider, providerUserId);
         //if (user == null)
         //{
@@ -83,9 +168,9 @@ public class Callback : PageModel
         CaptureExternalLoginContext(result, additionalLocalClaims, localSignInProps);
             
         // issue authentication cookie for user
-        var isuser = new IdentityServerUser(providerUserId)
+        var isuser = new IdentityServerUser(user!.Subject)
         {
-            DisplayName = providerUserId,
+            DisplayName = user.UserName,
             IdentityProvider = provider,
             AdditionalClaims = additionalLocalClaims
         };
@@ -100,7 +185,7 @@ public class Callback : PageModel
 
         // check if external login is in the context of an OIDC request
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
-        await _events.RaiseAsync(new UserLoginSuccessEvent(provider, providerUserId, providerUserId, providerUserId, true, context?.Client.ClientId));
+        await _events.RaiseAsync(new UserLoginSuccessEvent(provider, providerUserId, user.Subject, user.UserName, true, context?.Client.ClientId));
         Telemetry.Metrics.UserLogin(context?.Client.ClientId, provider!);
 
         if (context != null)

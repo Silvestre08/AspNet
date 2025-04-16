@@ -12,16 +12,16 @@ namespace Marvin.IDP.Entities
         public string Subject { get; set; }
 
         [MaxLength(200)]
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
 
         [MaxLength(200)]
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         [Required]
         public bool Active { get; set; }
 
         [MaxLength(200)]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [MaxLength(200)]
         public string? SecurityCode { get; set; }
@@ -33,6 +33,8 @@ namespace Marvin.IDP.Entities
 
         public ICollection<UserClaim> Claims { get; set; } = new List<UserClaim>();
 
+
+        public ICollection<UserLogin> Logins { get; set; } = new List<UserLogin>();
     }
 
 }

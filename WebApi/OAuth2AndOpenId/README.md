@@ -329,7 +329,7 @@ By default, identity server does not include identiy claims safe for the user id
 
 So how do we obtain the user information?
 There is a user info endpoint we can use to request additional claims. It requires an access token with scopes related to the claims that must be returned: if we want the profile information, the access token must contain the profile scope.
-The access tokens and refresh tokens can b returned from the token endpoint as well. In our flow an access token is delivered together with an identity token.
+The access tokens and refresh tokens can be returned from the token endpoint as well. In our flow an access token is delivered together with an identity token.
 So the flow revised (omitting the first part of the authorization code):
 ![](doc/accessTokenandIdentity.png)
 ![](doc/accessTokenandIdentity2.png)
@@ -1498,19 +1498,23 @@ Now looking into our callback page OnGet method:
           throw new InvalidOperationException($"External authentication error: { result.Failure }");
       }
 ```
+
 First, we get the user from the temporary cookie. That cookie was created by the middleware that matches the scheme that was triggered in the previous step. So we will have an Azure AD, or facebbok scheme, that will result in middleware being triggered that will result in writting this cookie.
 After we will try to find the claims. How that is done will depend on the external provider (need to search the claim names of the external provider).
 
 ```
         CaptureExternalLoginContext(result, additionalLocalClaims, localSignInProps);
 ```
+
 On very common thing to do is to store the identiy cookie that comes from the external idenity provider, so it can be used to automate signing out. Then idenity server user is created, etc. and we use to sign to our local idp. So at this point we can delete the tempory cookie because we do not need it anymore.
+
 ```
         // delete temporary cookie used during external authentication
         await HttpContext.SignOutAsync(IdentityServerConstants.ExternalCookieAuthenticationScheme);
 ```
 
 ### Integrating with Azure Ad
+
 Azure AD our Entra Id is part of microsoft enterprise identity service with signle sign-on, multi factor authentication.
 Assuming an active directory already exists, the first step is to create an app registration, on the app registration menu:
 
@@ -1520,6 +1524,7 @@ So we need to tell it is a web application and the redirect link: so our app is 
 
 ![](doc/AzureRedirect.PNG)
 
+A note to make this work is that the url needs the slash at the end: https://localhost:44300/signin-aad/
 We can continue the configuration and configure the front-channel logout URL, to redirect to our identity provider and cleanup session, etc
 
 ![](doc/azureNoImplicit.PNG)
@@ -1536,9 +1541,227 @@ We selected all open id permissions.
 On the overview page, we see the Azure created an unique client Id for our application.
 We also are going need our tenant Id, so our IDP know which instance of AD to use.
 
-So lets navigate to the endpoints tab and on there we can see a list of all the urls. All of them have on their url the tenant id we noted down.
-We can have a look into the open id connect metadata document and fetcht he issuer: 
+So lets navigate to the endpoints tab and, on it, we can see a list of all the urls. All of them have on their url the tenant id we noted down.
+We can have a look into the open id connect metadata document and fetch the issuer:
 ![](doc/metadataEndpoint.PNG)
-We are going to need the issuer.
+We are going to need the issuer as we've seen in previous examples.
+Now we need to configure the services to integrate with Entra Id at the level of IDP:
+
+```
+        builder.Services
+    .AddAuthentication()
+    .AddOpenIdConnect("AAD", "Azure Active Directory", options =>
+    {
+        options.SignInScheme = IdentityServerConstants.ExternalCookieAuthenticationScheme; // the scheme that will be used to store the result of the authentication
+        options.Authority = "https://login.microsoftonline.com/621cb4b2-eeb8-4699-913d-a651c392babd/v2.0";
+        options.ClientId = "df55658d-e228-4f72-9f11-b60334edb0e2"; // the client of the app we registered in active directory
+        options.ClientSecret = ""; // git hub blocks the push so we included the secret using dotnet secrets
+        options.ResponseType = "code";
+        options.CallbackPath = new PathString("/signin-aad/");
+        options.SignedOutCallbackPath = new PathString("/signout-aad/");
+        options.Scope.Add("email");
+        options.Scope.Add("offline_access");
+        options.SaveTokens = true;
+    });
+```
+
+The client id and secret are given to us by azure active directory. Note how the code is similar to the code on our client mvc app.
+We use cookie as the sign in scheme so the information is available on our call back page.
+The Authority property corresponds to the issuer we just saw on our metadata endpoint. Client Id and secret we also noted down when we created an app on azure entra id.
+Then authorization code flow and the callbacks.
+By turning the debugger one on the callback page, we see the authentication is of type federation. We also see the claims but we still need to implement account linkingm because for our image gallery, the claims come from our profile service that looks into the main database.
 
 ### Integrating with facebook
+
+Skipped for now
+
+One thing to keep in mind is that while we integrate with third parties, that means we are providing a lot of trust to them. So their security issues become our issues. Security issues can happend even with big players.
+It is good practice to keep the identity provider up to date and run penetration checks.
+Another issue is that all identity providers are not created equal. Facebook does not support federated sign-out for example. They want people stayed signed in. The problem is that if our app is integrated with facebook, that means that while the users is logged in in facebook, it is also logged in in our app.
+Microsoft provides nugget package middleware to other integration like google, twitter.
+
+## Federation
+
+So far we integrated with windows and azure entra for signing in. The problem is that each time we are being treated as a different user. We need account linking between the local users and the external identiy provider.
+Federation is just the process of delegating authentication to a third party: our IDP relies on another IDP for authentication. So these two identity providers are said to be part og the "same federation".
+The term federated identity is represented by the means of linking a person's identity and attributes, stored across multiple distinct identity providers.
+Claims can live at level of various IDps. It is common to store external claims locally and update them regularly (like for performance reasons) - the external provider is the master though!
+To link identities we need some sort of key that exists in both systems and that can be trusted: one example is a verified e-mail.
+So we need to make sure whatever the key is is correctly verified. IT is on it the reliability of federated identity relies.
+In enterprise environments with many integrations might be common to not find the key and some process needs to be done manually (lists of users).
+This is part of the user provisioning process: ensure the user is created, changed, disabled, deleted and givent he claims permissions they need.
+
+Lets start integrate our users. We need to keep track of all the external logins into our users. For that we:
+
+1. Create a user login class like so:
+
+```
+using System.ComponentModel.DataAnnotations;
+
+namespace Marvin.IDP.Entities
+{
+    public class UserLogin : IConcurrencyAware
+    {
+        [Key]
+        public Guid Id { get; set; }
+
+        public Guid UserId { get; set; }
+
+        public User User { get; set; }
+
+        [MaxLength(200)]
+        [Required]
+        public string Provider { get; set; } // external provider reference to link our user.
+
+        [MaxLength(200)]
+        [Required]
+        public string ProviderIdentityKey { get; set; } // key of the user at the level of the external IDP
+
+
+        public string ConcurrencyStamp { get; set; }
+    }
+}
+
+```
+
+This class links our user to a user in an external IDP. 2. Add a collection of user logins into our user. We also made nullable password and some other fields so users may not have on our local. 3. Add migrations.
+
+### Provisioning a federated identiy
+
+So far we linked Entra id and facebook. But we did not have a local user for that. So, on our callback page we are going to create a user without a password (the password is managed by the Entra ID).
+We basically need to check if the user already exists on our local database. If it doesn't exist, we need to create it. We also need to grab the claims from the external IDP. So we can now on our callback page returning the claims principal with our user id.
+In order to accomplish all of this, we changed the local user service and added the following these two methods:
+
+```
+        public async Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey)
+        {
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            var userLogin = await _context.UserLogins.Include(ul => ul.User)
+                .FirstOrDefaultAsync(ul => ul.Provider == provider && ul.ProviderIdentityKey == providerIdentityKey);
+
+            return userLogin?.User;
+        }
+
+        public User AutoProvisionUser(string provider,
+    string providerIdentityKey,
+    IEnumerable<Claim> claims)
+        {
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            if (claims is null)
+            {
+                throw new ArgumentNullException(nameof(claims));
+            }
+
+            var user = new User()
+            {
+                Active = true, // some variations exist like to send activation email
+                Subject = Guid.NewGuid().ToString()
+            };
+            foreach (var claim in claims)
+            {
+                user.Claims.Add(new UserClaim()
+                {
+                    Type = claim.Type,
+                    Value = claim.Value
+                });
+            }
+            user.Logins.Add(new UserLogin()
+            {
+                Provider = provider,
+                ProviderIdentityKey = providerIdentityKey
+            });
+
+            _context.Users.Add(user);
+            return user;
+        }
+
+
+
+```
+
+Those two methods allow us to provision a user based on the external user of the identity provider.
+The next step we need to implement is Claims Transformation.
+
+### Claims transformation
+
+Usually, external identity providers likes facebook and entra id do not have the claims we are working on with on our applications. For example, our client application is realying on claims like roles, given_name, etc. Claims transformation is the process of adapting the external users to the needs of our applications.
+One of the easiest way for mappings is to create dictionaries:
+
+```
+    private readonly Dictionary<string, string> _facebookClaimTypeMap = new()
+        {
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+            JwtClaimTypes.GivenName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+            JwtClaimTypes.FamilyName},
+            { "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+            JwtClaimTypes.Email}
+        };
+
+```
+
+For additional claims not present on the dictionary, like country and role, we would need to create an additional view, with the returnUrl passed through to include that.
+For now we are just going to use hardcoded values:
+
+```
+var mappedClaims = new List<Claim>();
+// map the claims, and ignore those for which no
+// mapping exists
+foreach (var claim in claims)
+{
+    if (_facebookClaimTypeMap.ContainsKey(claim.Type))
+    {
+        mappedClaims.Add(
+            new Claim(_facebookClaimTypeMap[claim.Type],
+            claim.Value));
+    }
+}
+mappedClaims.Add(new Claim("role", "FreeUser"));
+mappedClaims.Add(new Claim("country", "be"));
+
+// auto-provision the user
+user = _localUserService.AutoProvisionUser(
+    provider, providerUserId, mappedClaims.ToList());
+await _localUserService.SaveChangesAsync();
+```
+
+We can do many things here: we might want to update claims from the external idp on our database at regular intervals, additional checks on the key to identify duplicates.
+
+There are variations to this flow. One we already talked: ask for additional information, like roles, country etc.
+Another one is to require a user to choose a local password / local means of authentication.
+It is also not uncommon to activate the account via activation link.
+We can put more or less trust on the external provider.
+Another use case on user provisioning is to link an external account to an existing user. We did that for our Entra ID to show the concepts.
+Once we have all the necessary claims on our side we can log in into our apps. Notes: be mindfull of the requirements like refrsh tokens on integrating with other identity providers.
+
+There are other possible flows of course. We so far implemented automatic linking between acconts but we may have a profile page where the user manually links accounts or asking the user if they want to link if we detect a potential match.s
+
+## Multi-factor authentication
+
+It is the identification of user by means of the combinatior of two or different factors. A factor is a type of communication: like password, authenticaton app, etc
+
+### One time password
+
+We generate a one time password and send it to an email, for example. But this is not a true MFA. We need something we know and something we have (something we know is our password, something we have is our finger).
+The Organization NIST states that tje ability to receive an email message does not generally prove the possesion of a specific device.
+It is better than nothing when no alternative is available.
+Let's use an authenticato app: considered soft OTP implementation.
+It generates an OTP on the device.

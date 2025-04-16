@@ -3,6 +3,7 @@ using System;
 using Marvin.IDP.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Marvin.IDP.Migrations
 {
     [DbContext(typeof(IdentityDbContext))]
-    partial class IdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250413010408_AddUsrLogin")]
+    partial class AddUsrLogin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
@@ -32,10 +35,12 @@ namespace Marvin.IDP.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Password")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
@@ -52,6 +57,7 @@ namespace Marvin.IDP.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
@@ -124,7 +130,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("ccca788f-bdec-4d9f-9caf-b149616d6867"),
-                            ConcurrencyStamp = "6b041387-5a38-4a3c-8650-f79c7454641a",
+                            ConcurrencyStamp = "9adcb458-3fc7-422b-80c7-d4024535f764",
                             Type = "given_name",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "David"
@@ -132,7 +138,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("41f72664-5378-426b-8871-0b8cb852bf22"),
-                            ConcurrencyStamp = "6a124ff2-1773-4f29-9ef0-b5ee240955de",
+                            ConcurrencyStamp = "096dff14-764e-42f4-9202-6ba700bb6ecb",
                             Type = "family_name",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "Flagg"
@@ -140,7 +146,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("961a83d0-1263-4b96-899b-059e168b03a5"),
-                            ConcurrencyStamp = "4a25b837-4e64-46d7-ab22-1fb1822d6a72",
+                            ConcurrencyStamp = "0266f655-7082-4102-aafd-8714b39a5c76",
                             Type = "country",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "nl"
@@ -148,7 +154,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("4a337664-2555-40c6-aad6-53aab772d766"),
-                            ConcurrencyStamp = "457a3fff-9636-4a57-9165-5aecb675d914",
+                            ConcurrencyStamp = "1958b2ec-74d0-4be1-87d9-6daaaca82f64",
                             Type = "role",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "FreeUser"
@@ -156,7 +162,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("508b5a3c-ad01-4376-ade9-2aae53990c0b"),
-                            ConcurrencyStamp = "cec1e269-0105-4e10-ac68-f5748b897909",
+                            ConcurrencyStamp = "7807a64c-7776-42d1-9d92-3e6c86331859",
                             Type = "given_name",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "Emma"
@@ -164,7 +170,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("a15ee06c-a2fe-4036-8a70-63eb4b7dc646"),
-                            ConcurrencyStamp = "380a3178-e1a7-4e5b-8c10-9f756dc83991",
+                            ConcurrencyStamp = "4b5df728-4934-4bcc-b901-cc7d5abe39b4",
                             Type = "family_name",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "Flagg"
@@ -172,7 +178,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("63647ad2-2557-4b0b-9065-f95bfbcd07cb"),
-                            ConcurrencyStamp = "015d3401-fb9f-4d4e-88f3-af93b0cab328",
+                            ConcurrencyStamp = "98c77f0d-3a95-44b1-94f0-5567e7b54ba5",
                             Type = "country",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "be"
@@ -180,7 +186,7 @@ namespace Marvin.IDP.Migrations
                         new
                         {
                             Id = new Guid("772648ab-ff21-4684-a959-f7cc55633c70"),
-                            ConcurrencyStamp = "52f91473-d5e2-43db-a377-d33f226fab13",
+                            ConcurrencyStamp = "725b0313-4980-4feb-be15-ca44e423c91e",
                             Type = "role",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "PayingUser"
@@ -194,7 +200,6 @@ namespace Marvin.IDP.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasColumnType("TEXT");
 

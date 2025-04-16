@@ -2,6 +2,7 @@
 using Marvin.IDP.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace Marvin.IDP.Services
@@ -61,7 +62,36 @@ namespace Marvin.IDP.Services
             // Validate credentials
             var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
             return verificationResult == PasswordVerificationResult.Success;
-        } 
+        }
+
+        public async Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey) 
+        {
+            if (string.IsNullOrWhiteSpace(provider)) 
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            var userLogin = await _context.UserLogins.Include(ul => ul.User)
+                .FirstOrDefaultAsync(ul => ul.Provider == provider && ul.ProviderIdentityKey == providerIdentityKey);
+
+            return userLogin?.User;
+        }
+
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            if (email is null)
+            {
+                throw new ArgumentNullException(nameof(email));
+            }
+
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+        }
 
         public async Task<User> GetUserByUserNameAsync(string userName)
         {
@@ -144,7 +174,78 @@ namespace Marvin.IDP.Services
             _context.Users.Add(userToAdd);
         }
 
-  
+        public async Task AddExternalProviderToUser(
+           string subject,
+           string provider,
+           string providerIdentityKey)
+        {
+            if (string.IsNullOrWhiteSpace(subject))
+            {
+                throw new ArgumentNullException(nameof(subject));
+            }
+
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            var user = await GetUserBySubjectAsync(subject);
+            user.Logins.Add(new UserLogin()
+            {
+                Provider = provider,
+                ProviderIdentityKey = providerIdentityKey
+            });
+        }
+
+        public User AutoProvisionUser(string provider,
+    string providerIdentityKey,
+    IEnumerable<Claim> claims, string email = "")
+        {
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                throw new ArgumentNullException(nameof(provider));
+            }
+
+            if (string.IsNullOrWhiteSpace(providerIdentityKey))
+            {
+                throw new ArgumentNullException(nameof(providerIdentityKey));
+            }
+
+            if (claims is null)
+            {
+                throw new ArgumentNullException(nameof(claims));
+            }
+
+            var user = new User()
+            {
+                Active = true, // some variations exist like to send activation email
+                Subject = Guid.NewGuid().ToString(),
+                Email = email,
+            };
+            foreach (var claim in claims)
+            {
+                user.Claims.Add(new UserClaim()
+                {
+                    Type = claim.Type,
+                    Value = claim.Value
+                });
+            }
+            user.Logins.Add(new UserLogin()
+            {
+                Provider = provider,
+                ProviderIdentityKey = providerIdentityKey
+            });
+
+            _context.Users.Add(user);
+            return user;
+        }
+
+
         public async Task<bool> SaveChangesAsync()
         {
             return (await _context.SaveChangesAsync() > 0);
