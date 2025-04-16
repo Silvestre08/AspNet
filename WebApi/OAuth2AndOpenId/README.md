@@ -1765,3 +1765,14 @@ The Organization NIST states that tje ability to receive an email message does n
 It is better than nothing when no alternative is available.
 Let's use an authenticato app: considered soft OTP implementation.
 It generates an OTP on the device.
+There are essentially two types of OTPs:
+
+![](doc/OTP.PNG)
+
+TOTP works in this way:
+![](doc/TOTP.PNG)
+In order to configure this in a safely manner, the secret needs to be sent to the client. This should not happen over the wire. Usually a user is forced to scan a bar code that contains the secret.
+See the example of such URI:
+![](doc/TOTPStructure.PNG)
+SO then the client safely stores the secret and the IDP does the same. This is the registration flow.
+For the authentication flow: a random number is generated for use at a specific interval from the secret. The user inputs the TOTP at the IDP level and the IDP generates a TOTP using the same secret. When there is a match, authentication is successful.
