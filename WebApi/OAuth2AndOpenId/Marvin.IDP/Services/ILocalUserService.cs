@@ -38,6 +38,13 @@ namespace Marvin.IDP.Services
                   string provider,
                   string providerIdentityKey);
 
+        Task<bool> AddUserSecret(string subject,
+    string name, string secret);
+
+        User AutoProvisionUser(string provider,
+    string providerIdentityKey,
+    IEnumerable<Claim> claims, string email = "")
+
         Task<bool> SaveChangesAsync();
     }
 }

@@ -1784,3 +1784,4 @@ So we add a collection of user secrets to our user class.
 We add a new razor page for mfa registration. At the end we generate a secret link like the one of the picture above.
 Now we need to add a library to generate a QR code, like qrcodejs.
 We can just copy and past to our wwwwroot/js folder.
+The javascript library will generate the QR code for use. Check the razor page. it will pick the information from the view.
