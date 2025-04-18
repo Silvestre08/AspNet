@@ -1776,3 +1776,11 @@ See the example of such URI:
 ![](doc/TOTPStructure.PNG)
 SO then the client safely stores the secret and the IDP does the same. This is the registration flow.
 For the authentication flow: a random number is generated for use at a specific interval from the secret. The user inputs the TOTP at the IDP level and the IDP generates a TOTP using the same secret. When there is a match, authentication is successful.
+
+### Add MFA with google authenticator app
+
+The secret needs to be per inidvidual user. So we need to first enhance our schema to do that.
+So we add a collection of user secrets to our user class.
+We add a new razor page for mfa registration. At the end we generate a secret link like the one of the picture above.
+Now we need to add a library to generate a QR code, like qrcodejs.
+We can just copy and past to our wwwwroot/js folder.
