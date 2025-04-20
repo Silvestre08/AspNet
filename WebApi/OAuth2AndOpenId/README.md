@@ -1784,4 +1784,7 @@ So we add a collection of user secrets to our user class.
 We add a new razor page for mfa registration. At the end we generate a secret link like the one of the picture above.
 Now we need to add a library to generate a QR code, like qrcodejs.
 We can just copy and past to our wwwwroot/js folder.
-The javascript library will generate the QR code for use. Check the razor page. it will pick the information from the view.
+The javascript library will generate the QR code for use. Check the razor page. It will pick the information from the view.
+Then we navigate to our identity provider to the index page and add a link there to navigate to the MFA page we just added.
+We will see the QR code being generated (we had to add a qrcode helper in order to execute scripting on the page.)
+We will input that secret on our phone and from that moment on, we will have OTPs being generated!.
