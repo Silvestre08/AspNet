@@ -1780,11 +1780,40 @@ For the authentication flow: a random number is generated for use at a specific 
 ### Add MFA with google authenticator app
 
 The secret needs to be per inidvidual user. So we need to first enhance our schema to do that.
-So we add a collection of user secrets to our user class.
-We add a new razor page for mfa registration. At the end we generate a secret link like the one of the picture above.
-Now we need to add a library to generate a QR code, like qrcodejs.
-We can just copy and past to our wwwwroot/js folder.
-The javascript library will generate the QR code for use. Check the razor page. It will pick the information from the view.
-Then we navigate to our identity provider to the index page and add a link there to navigate to the MFA page we just added.
-We will see the QR code being generated (we had to add a qrcode helper in order to execute scripting on the page.)
-We will input that secret on our phone and from that moment on, we will have OTPs being generated!.
+
+1. So we add a collection of user secrets to our user class.
+2. We add a new razor page for mfa registration.
+3. At the end we generate a secret link like the one of the picture above.
+4. Now we need to add a library to generate a QR code, like qrcodejs. We can just copy and past to our wwwwroot/js folder.
+   The javascript library will generate the QR code for use. Check the razor page. It will pick the information from the view.
+   Then we navigate to our identity provider to the index page and add a link there to navigate to the MFA page we just added.
+   We will see the QR code being generated (we had to add a qrcode helper in order to execute scripting on the page.)
+   We will input that secret on our phone and from that moment on, we will have OTPs being generated!.
+
+But how to add that to the login flow?
+We need to take into account the types of users. For example, if a user uses Azure Ad, azure AD most likely has MFA. So we would be requesting it multiple times and that is not the best user experience.
+But we also want to enforce that somehow because we may have local users. It would be great that the 3rd party provider would tell us how the user authenticated. Not all of them gives us that information. We can enable to certain users, etc, only for local users. All options should be considered.
+We are going to required that on our login for local user accounts.
+
+1. So we need to add a Totp property to our input model on our login page.
+2. We need to generate the TOPT ourselves from the secret and compare with the one entered by the user. We can import a nugget package like two steps authenticator.
+3. We stored the user secret on our database so we can retrive it after successfull credentials verification to see if the passwords match.
+
+```
+      var userSecret = await _localUserService.GetUserSecretAsync(user.Subject, "TOTP");
+      if (userSecret == null)
+      {
+          ModelState.AddModelError("usersecret", "No second factor secret has been registered - please contact the helpdesk.");
+          await BuildModelAsync(Input.ReturnUrl);
+          return Page();
+      }
+
+      // validate the inputted totp
+      var authenticator = new TwoStepsAuthenticator.TimeAuthenticator();
+      if (!authenticator.CheckCode(userSecret.Secret, Input.Totp, user))
+      {
+          ModelState.AddModelError("totp", "TOTP is invalid.");
+          await BuildModelAsync(Input.ReturnUrl);
+          return Page();
+      }
+```

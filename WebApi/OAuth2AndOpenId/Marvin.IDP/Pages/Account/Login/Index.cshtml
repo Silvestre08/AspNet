@@ -31,7 +31,11 @@
                                 <label asp-for="Input.Password"></label>
                                 <input type="password" class="form-control" placeholder="Password" asp-for="Input.Password" autocomplete="off">
                             </div>
-                            
+                            <div class="form-group">
+                                <label asp-for="Input.Totp"></label>
+                                <input class="form-control" placeholder="Totp" asp-for="Input.Totp" autocomplete="off">
+                            </div>
+
                             @if (Model.View.AllowRememberLogin)
                             {
                                 <div class="form-group">
@@ -43,11 +47,15 @@
                                     </div>
                                 </div>
                             }
+
                             <div class="form-group">
-                                <a class="btn btn-secondary" 
-                                asp-page="/User/Registration/Index"
-                                asp-route-returnUrl ="@Model.Input.ReturnUrl">Not registered yet? Click here.</a>
+                                <a class="btn btn-secondary"
+                                   asp-page="/User/Registration/Index"
+                                   asp-route-returnUrl="@Model.Input.ReturnUrl">
+                                    Not registered yet?  Click here
+                                </a>
                             </div>
+                            
                             <button class="btn btn-primary" name="Input.Button" value="login">Login</button>
                             <button class="btn btn-secondary" name="Input.Button" value="cancel">Cancel</button>
                         </form>
@@ -67,23 +75,15 @@
                         <ul class="list-inline">
                             @foreach (var provider in Model.View.VisibleExternalProviders)
                             {
-
-
-
                                 <li class="list-inline-item">
                                     @if (provider.AuthenticationScheme == "Windows")
-
-
-
                                     {
-                                                                                <a class="btn btn-secondary"
+                                        <a class="btn btn-secondary"
                                            asp-page="/Windows/Index"
-                                           asp-route-scheme="@provider.AuthenticationScheme"
                                            asp-route-returnUrl="@Model.Input.ReturnUrl">
                                             @provider.DisplayName
                                         </a>
-                                    }
-
+                                    }
                                     else
                                     {
                                         <a class="btn btn-secondary"

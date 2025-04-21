@@ -42,5 +42,8 @@ namespace Marvin.IDP.Services
     string name, string secret);
 
         Task<bool> SaveChangesAsync();
+
+        Task<UserSecret> GetUserSecretAsync(
+            string subject, string name);
     }
 }
