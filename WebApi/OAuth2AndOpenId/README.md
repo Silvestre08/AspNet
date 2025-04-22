@@ -1817,3 +1817,23 @@ We are going to required that on our login for local user accounts.
           return Page();
       }
 ```
+## Asp.net core Identity
+Asp.net core identity is an out of the box solution provided by microsoft for user management. 
+It provides password management capabilites, as well as roles, claims,  profile data and SSO. It is an alternative to what we have done so far. SO far, we have implemented a few screens, etc.
+Asp.net core identity provides those out of the box, if we do not need much flexibility on our Auth architecture.
+Since .net 8 identity endpoints are also provided. They are the same endpoints the Asp.net core identity UI uses behind the box (kind of), which allows the user to keep they user management screens on the front end technologies they are using.
+In this chapter we will include it with identity server. Our starting point is our application before we started adding users to our local database.
+When we add asp.net core identity we select:
+1. Add new scafolded item to our api.
+2. We choose all the options we want to override:
+![](doc/identityOtpions.PNG)
+The files we select will be added to our project so we can costumized it.
+Exploring the added code we can see:
+```
+        builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+            .AddEntityFrameworkStores<MarvinIDPContext>()
+            .AddDefaultTokenProviders(); // this adds identity services
+```
+The aboce few lines avoids adding the UI pages. What we want to accomplish is to have idenity server as the main control of the flow but have integration points with asp.net core identity.
+It is through the user manager that we add users, add claims, etc.
+Our seed data file reveals some of the capabilities of the user manager.
