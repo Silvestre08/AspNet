@@ -1836,4 +1836,22 @@ Exploring the added code we can see:
 ```
 The aboce few lines avoids adding the UI pages. What we want to accomplish is to have idenity server as the main control of the flow but have integration points with asp.net core identity.
 It is through the user manager that we add users, add claims, etc.
-Our seed data file reveals some of the capabilities of the user manager.
+Our seed data file reveals some of the capabilities of the user manager. 
+In order for all of this to work, we need to import duende asp.net identity nugget package into our solution and tell identity server to use asp.net core identiy.
+
+## Going to production
+Identity server is like any other web app. One way of hosting it in Azure is by using Azure App Service. We create an app service instance and copy our files to it (we can do from visual studio, ci cd pipelines - check devops repo, Cli, etc..) 
+Before deploying it we need to configure operational data and configuration data.
+Configuration data includes resources like our APi and identity resources, CORS or identity providers..
+Configuration can be hard coded, in settings file or in database store, so they can be changed from a management screen.
+Operational datra: grant results (tokens, codes, etc), key management data, server side sessions, etc.
+So far we had evertyhing in memory but that is not a good idea. In a multi server environment, different requests may end up in different servers, like when we use a load balancer.
+This means we cannot use sql lite as data store as well because it is a file deployed with the same host. So we need a real database. We are going to use an azure sql database.
+We also need a central safe location for protecting keys and grants at rest, session management etc.
+We also need so store signing credentials in a central location. Signing credentials need to be consistent between all instances of our app under a load balancer. We will store a certificate in azure key vault to accomodate that.
+Last thing to keep in mind is that proxy servers, load balancers, etc often obscure information about the request:
+1. original scheme when Http gets proxyied to https.
+2. original client ip address (our host will receive the request from the load balancer and not from the client)
+So we need to use forwarded headers.
+
+When deployed to production we also need a license (even if it is free).
