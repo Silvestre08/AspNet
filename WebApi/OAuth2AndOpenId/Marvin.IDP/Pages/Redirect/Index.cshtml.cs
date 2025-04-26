@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Marvin.IDP.Pages.Redirect;
+namespace IdentityServerHost.Pages.Redirect;
 
 [AllowAnonymous]
 public class IndexModel : PageModel

@@ -2,10 +2,10 @@
 // See LICENSE in the project root for license information.
 
 
-namespace Marvin.IDP.Pages.Logout;
+namespace IdentityServerHost.Pages.Logout;
 
 public static class LogoutOptions
 {
     public static readonly bool ShowLogoutPrompt = true;
-    public static readonly bool AutomaticRedirectAfterSignOut = true;
+    public static readonly bool AutomaticRedirectAfterSignOut = false;
 }

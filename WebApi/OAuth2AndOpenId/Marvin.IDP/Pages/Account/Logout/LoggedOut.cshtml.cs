@@ -5,7 +5,7 @@ using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Marvin.IDP.Pages.Logout;
+namespace IdentityServerHost.Pages.Logout;
 
 [SecurityHeaders]
 [AllowAnonymous]

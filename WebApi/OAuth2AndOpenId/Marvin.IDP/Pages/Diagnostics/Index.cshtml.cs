@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Marvin.IDP.Pages.Diagnostics;
+namespace IdentityServerHost.Pages.Diagnostics;
 
 [SecurityHeaders]
 [Authorize]

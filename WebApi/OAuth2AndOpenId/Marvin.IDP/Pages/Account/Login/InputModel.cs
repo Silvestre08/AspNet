@@ -3,13 +3,10 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Marvin.IDP.Pages.Login;
+namespace IdentityServerHost.Pages.Login;
 
 public class InputModel
 {
-    [Required]
-    public string Totp { get; set; }
-
     [Required]
     public string? Username { get; set; }
     [Required]

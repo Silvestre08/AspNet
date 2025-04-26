@@ -4,7 +4,7 @@
 // Copyright (c) Duende Software. All rights reserved.
 // See LICENSE in the project root for license information.
 
-namespace Marvin.IDP.Pages.Logout;
+namespace IdentityServerHost.Pages.Logout;
 
 public class LoggedOutViewModel
 {

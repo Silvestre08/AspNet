@@ -1,10 +1,10 @@
-﻿using System.Security.Claims;
-using IdentityModel; 
+﻿using Duende.IdentityModel;
+using Marvin.IDP.Areas.Identity.Data;
+using Marvin.IDP.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using Marvin.IDP.Data;
-using Marvin.IDP.Areas.Identity.Data;
+using System.Security.Claims;
 
 namespace Marvin.IDP;
 
