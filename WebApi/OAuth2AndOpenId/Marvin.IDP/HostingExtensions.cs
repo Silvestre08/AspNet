@@ -43,7 +43,7 @@ internal static class HostingExtensions
             .AddInMemoryApiScopes(Config.ApiScopes)
             .AddInMemoryApiResources(Config.ApiResources)
             .AddInMemoryClients(Config.Clients)
-            .AddProfileService<LocalUserProfileService>();
+            .AddProfileService<LocalUserProfileService>().AddConfigurationStore();
         //.AddTestUsers(TestUsers.Users);
 
         builder.Services
