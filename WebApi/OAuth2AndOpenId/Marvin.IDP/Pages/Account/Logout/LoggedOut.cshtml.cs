@@ -2,10 +2,11 @@
 // See LICENSE in the project root for license information.
 
 using Duende.IdentityServer.Services;
+using IdentityServerHost.Pages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace IdentityServerHost.Pages.Logout;
+namespace Marvin.IDP.Pages.Logout;
 
 [SecurityHeaders]
 [AllowAnonymous]

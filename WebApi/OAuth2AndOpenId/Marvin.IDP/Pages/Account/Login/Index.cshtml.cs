@@ -6,41 +6,40 @@ using Duende.IdentityServer.Events;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
-using IdentityServerHost.Models;
+using IdentityServerHost.Pages;
+using IdentityServerHost.Pages.Login;
+using Marvin.IDP.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-
-namespace IdentityServerHost.Pages.Login;
+using Telemetry = IdentityServerHost.Pages.Telemetry;
+using System.Web;
+namespace Marvin.IDP.Pages.Login;
 
 [SecurityHeaders]
 [AllowAnonymous]
 public class Index : PageModel
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly ILocalUserService _localUserService;
     private readonly IIdentityServerInteractionService _interaction;
     private readonly IEventService _events;
     private readonly IAuthenticationSchemeProvider _schemeProvider;
     private readonly IIdentityProviderStore _identityProviderStore;
 
     public ViewModel View { get; set; } = default!;
-        
+
     [BindProperty]
     public InputModel Input { get; set; } = default!;
-        
+
     public Index(
         IIdentityServerInteractionService interaction,
         IAuthenticationSchemeProvider schemeProvider,
         IIdentityProviderStore identityProviderStore,
         IEventService events,
-        UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager)
+        ILocalUserService localUserService)
     {
-        _userManager = userManager;
-        _signInManager = signInManager;
+        _localUserService = localUserService ?? throw new ArgumentNullException(nameof(localUserService));
         _interaction = interaction;
         _schemeProvider = schemeProvider;
         _identityProviderStore = identityProviderStore;
@@ -50,7 +49,7 @@ public class Index : PageModel
     public async Task<IActionResult> OnGet(string? returnUrl)
     {
         await BuildModelAsync(returnUrl);
-            
+
         if (View.IsExternalLoginOnly)
         {
             // we only have one option for logging in and it's an external provider
@@ -59,7 +58,7 @@ public class Index : PageModel
 
         return Page();
     }
-        
+
     public async Task<IActionResult> OnPost()
     {
         // check if we are in the context of an authorization request
@@ -97,12 +96,49 @@ public class Index : PageModel
 
         if (ModelState.IsValid)
         {
-            var result = await _signInManager.PasswordSignInAsync(Input.Username!, Input.Password!, Input.RememberLogin, lockoutOnFailure: true);
-            if (result.Succeeded)
+            if (await _localUserService.ValidateCredentialsAsync(Input.Username, Input.Password))
             {
-                var user = await _userManager.FindByNameAsync(Input.Username!);
-                await _events.RaiseAsync(new UserLoginSuccessEvent(user!.UserName, user.Id, user.UserName, clientId: context?.Client.ClientId));
+                var user = await _localUserService.GetUserByUserNameAsync(Input.Username);
+
+                // validate the second factor 
+                // first, get the totp secret for this user 
+                var userSecret = await _localUserService.GetUserSecretAsync(user.Subject, "TOTP");
+                if (userSecret == null)
+                {
+                    ModelState.AddModelError("usersecret", "No second factor secret has been registered - please contact the helpdesk.");
+                    await BuildModelAsync(Input.ReturnUrl);
+                    return Page();
+                }
+
+                // validate the inputted totp 
+                var authenticator = new TwoStepsAuthenticator.TimeAuthenticator();
+                if (!authenticator.CheckCode(userSecret.Secret, Input.Totp, user))
+                {
+                    ModelState.AddModelError("totp", "TOTP is invalid.");
+                    await BuildModelAsync(Input.ReturnUrl);
+                    return Page();
+                }
+
+                await _events.RaiseAsync(new UserLoginSuccessEvent(user.UserName, user.Subject, user.UserName, clientId: context?.Client.ClientId));
                 Telemetry.Metrics.UserLogin(context?.Client.ClientId, IdentityServerConstants.LocalIdentityProvider);
+
+                // only set explicit expiration here if user chooses "remember me". 
+                // otherwise we rely upon expiration configured in cookie middleware.
+                var props = new AuthenticationProperties();
+                if (LoginOptions.AllowRememberLogin && Input.RememberLogin)
+                {
+                    props.IsPersistent = true;
+                    props.ExpiresUtc = DateTimeOffset.UtcNow.Add(LoginOptions.RememberMeLoginDuration);
+                }
+                ;
+
+                // issue authentication cookie with subject ID and username
+                var isuser = new IdentityServerUser(user.Subject)
+                {
+                    DisplayName = user.UserName
+                };
+
+                await HttpContext.SignInAsync(isuser, props);
 
                 if (context != null)
                 {
@@ -137,7 +173,7 @@ public class Index : PageModel
             }
 
             const string error = "invalid credentials";
-            await _events.RaiseAsync(new UserLoginFailureEvent(Input.Username, error, clientId:context?.Client.ClientId));
+            await _events.RaiseAsync(new UserLoginFailureEvent(Input.Username, error, clientId: context?.Client.ClientId));
             Telemetry.Metrics.UserLoginFailure(context?.Client.ClientId, IdentityServerConstants.LocalIdentityProvider, error);
             ModelState.AddModelError(string.Empty, LoginOptions.InvalidCredentialsErrorMessage);
         }
@@ -153,7 +189,7 @@ public class Index : PageModel
         {
             ReturnUrl = returnUrl
         };
-            
+
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
         if (context?.IdP != null && await _schemeProvider.GetSchemeAsync(context.IdP) != null)
         {
@@ -169,7 +205,7 @@ public class Index : PageModel
 
             if (!local)
             {
-                View.ExternalProviders = new[] { new ViewModel.ExternalProvider ( authenticationScheme: context.IdP ) };
+                View.ExternalProviders = new[] { new ViewModel.ExternalProvider(authenticationScheme: context.IdP) };
             }
 
             return;

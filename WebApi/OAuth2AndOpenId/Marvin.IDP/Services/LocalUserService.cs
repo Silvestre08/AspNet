@@ -64,7 +64,7 @@ namespace Marvin.IDP.Services
             return verificationResult == PasswordVerificationResult.Success;
         }
 
-        public async Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey) 
+        public async Task<User?> FindUserByExternalProviderAsync(string provider, string providerIdentityKey) 
         {
             if (string.IsNullOrWhiteSpace(provider)) 
             {

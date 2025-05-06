@@ -27,7 +27,7 @@ namespace Marvin.IDP.Services
 
         Task<bool> ActivateUserAsync(string securityCode);
 
-        Task<User?> FindUserByExternalProviderAsyn(string provider, string providerIdentityKey);
+        Task<User?> FindUserByExternalProviderAsync(string provider, string providerIdentityKey);
 
         User AutoProvisionUser(string provider, string providerIdentityKey, IEnumerable<Claim> claims, string email ="");
 

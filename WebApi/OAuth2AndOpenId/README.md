@@ -1848,10 +1848,20 @@ Operational datra: grant results (tokens, codes, etc), key management data, serv
 So far we had evertyhing in memory but that is not a good idea. In a multi server environment, different requests may end up in different servers, like when we use a load balancer.
 This means we cannot use sql lite as data store as well because it is a file deployed with the same host. So we need a real database. We are going to use an azure sql database.
 We also need a central safe location for protecting keys and grants at rest, session management etc.
-We also need so store signing credentials in a central location. Signing credentials need to be consistent between all instances of our app under a load balancer. We will store a certificate in azure key vault to accomodate that.
+We also need to store signing credentials in a central location. Signing credentials need to be consistent between all instances of our app under a load balancer. We will store a certificate in azure key vault to accomodate that.
 Last thing to keep in mind is that proxy servers, load balancers, etc often obscure information about the request:
 1. original scheme when Http gets proxyied to https.
 2. original client ip address (our host will receive the request from the load balancer and not from the client)
 So we need to use forwarded headers.
 
-When deployed to production we also need a license (even if it is free).
+When deployed to production we also need a license (even if it is free). So we are going through that process now.
+
+## Storing configuration data in azure database
+1. The first thing we need is to create an SQL server database resource in azure:
+
+![](doc/sqldatabse.PNG)
+
+Store the user name and password and Azure gives us the connection strings to connect to our database. We can also connect directly using SQL server management studio.
+
+2. We are going to seed the database in azure with the data we have on our config file. As such, all the tests users and other data in our config file is going to be seeded in the database. In a real production scenario we would need some sort of management screen to include all this data as well.
+In a sw development scenario we would have a database locally and the azure one is just for production.
