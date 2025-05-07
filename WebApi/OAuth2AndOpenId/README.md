@@ -1865,3 +1865,19 @@ Store the user name and password and Azure gives us the connection strings to co
 
 2. We are going to seed the database in azure with the data we have on our config file. As such, all the tests users and other data in our config file is going to be seeded in the database. In a real production scenario we would need some sort of management screen to include all this data as well.
 In a sw development scenario we would have a database locally and the azure one is just for production.
+So we need to add the migrations for the configuration that are in another asssembly (from the nugget of duende) and comment out all the in memory configurations:
+
+```
+var migrationAssembly = typeof(Program).GetTypeInfo().Assembly.GetName().Name;
+.AddConfigurationStore(options => 
+{
+    options.ConfigureDbContext = optionsBuilder =>
+        optionsBuilder.UseSqlServer(
+            builder.Configuration.GetConnectionString("MarvinIdentityDBConnectionString"),
+            sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
+})
+```
+3. Add migration. When adding the migration we need to be specific about the context, given the fact we have multiple contexts.
+4. Add SeedData class to seed the configuration data we have in the Config class. (in production it is better to have some sort of admin ui)
+5. Update database command to create it and lets go!
+COnfiguration data is accessed very often during authentication so it is a goog idea to add cache.

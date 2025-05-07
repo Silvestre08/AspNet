@@ -5,6 +5,7 @@ using Marvin.IDP.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using System.Reflection;
 
 namespace Marvin.IDP;
 
@@ -34,16 +35,25 @@ internal static class HostingExtensions
             options.UseSqlite(
                 builder.Configuration.GetConnectionString("MarvinIdentityDBConnectionString"));
         });
+
+        var migrationAssembly = typeof(Program).GetTypeInfo().Assembly.GetName().Name;
         builder.Services.AddIdentityServer(options =>
             {
                 // https://docs.duendesoftware.com/identityserver/v6/fundamentals/resources/api_scopes#authorization-based-on-scopes
                 options.EmitStaticAudienceClaim = true;
             })
-            .AddInMemoryIdentityResources(Config.IdentityResources)
-            .AddInMemoryApiScopes(Config.ApiScopes)
-            .AddInMemoryApiResources(Config.ApiResources)
-            .AddInMemoryClients(Config.Clients)
-            .AddProfileService<LocalUserProfileService>().AddConfigurationStore();
+            //.AddInMemoryIdentityResources(Config.IdentityResources)
+            //.AddInMemoryApiScopes(Config.ApiScopes)
+            //.AddInMemoryApiResources(Config.ApiResources)
+            //.AddInMemoryClients(Config.Clients)
+            .AddProfileService<LocalUserProfileService>()
+            .AddConfigurationStore(options => 
+            {
+                options.ConfigureDbContext = optionsBuilder =>
+                    optionsBuilder.UseSqlServer(
+                        builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
+                        sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
+            }).AddConfigurationStoreCache();
         //.AddTestUsers(TestUsers.Users);
 
         builder.Services
