@@ -3,6 +3,7 @@ using System;
 using Marvin.IDP.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -15,45 +16,49 @@ namespace Marvin.IDP.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.2");
+            modelBuilder
+                .HasAnnotation("ProductVersion", "9.0.2")
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("Marvin.IDP.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("Active")
-                        .HasColumnType("INTEGER");
+                        .HasColumnType("bit");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Password")
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("SecurityCode")
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime>("SecurityCodeExpirationDate")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
 
@@ -61,7 +66,8 @@ namespace Marvin.IDP.Migrations
                         .IsUnique();
 
                     b.HasIndex("UserName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[UserName] IS NOT NULL");
 
                     b.ToTable("Users");
 
@@ -70,9 +76,9 @@ namespace Marvin.IDP.Migrations
                         {
                             Id = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Active = true,
-                            ConcurrencyStamp = "314e0d20-208f-4e3c-a131-deae789a4fdc",
-                            Email = "David@gmail.com",
-                            Password = "password",
+                            ConcurrencyStamp = "f283356c-b280-4551-a45f-9d9324c229d3",
+                            Email = "david@someprovider.com",
+                            Password = "AQAAAAEAACcQAAAAEIi0HEeTvqcxwhA+dR/RKOEIfdGn1VIKy0P+AhKOp5vIdsb80zmPxqbhxllt5AmkKg==",
                             SecurityCodeExpirationDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Subject = "d860efca-22d9-47fd-8249-791ba61b07c7",
                             UserName = "David"
@@ -81,9 +87,9 @@ namespace Marvin.IDP.Migrations
                         {
                             Id = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Active = true,
-                            ConcurrencyStamp = "c198a000-7f99-4ef5-b4a9-8a18abab2281",
-                            Email = "David@gmail.com",
-                            Password = "password",
+                            ConcurrencyStamp = "35ea8237-6e8b-468a-b0a2-2d698c3b388f",
+                            Email = "emma@someprovider.com",
+                            Password = "AQAAAAEAACcQAAAAEHgXILmaP4pu/Kz8M2cASmfD/XsHykcmTNyFTvQQiwyWaLWjWAlxBH1L5pQfSyRYqw==",
                             SecurityCodeExpirationDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Subject = "b7539694-97e7-4dfe-84da-b4256e1ff5c7",
                             UserName = "Emma"
@@ -94,25 +100,25 @@ namespace Marvin.IDP.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(250)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("Id");
 
@@ -123,64 +129,64 @@ namespace Marvin.IDP.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("ccca788f-bdec-4d9f-9caf-b149616d6867"),
-                            ConcurrencyStamp = "fb78a965-b1ba-4f0b-a251-3458eb3767fd",
+                            Id = new Guid("469a0b62-ac04-43f4-94a7-618ad02d7815"),
+                            ConcurrencyStamp = "a3e572bd-4188-4960-bbc4-990ff3a63ba3",
                             Type = "given_name",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "David"
                         },
                         new
                         {
-                            Id = new Guid("41f72664-5378-426b-8871-0b8cb852bf22"),
-                            ConcurrencyStamp = "cebde8b2-96ae-4bba-89ee-733e2c6b98fb",
+                            Id = new Guid("3711e69d-d326-49c4-bf2a-b15367fd3ca6"),
+                            ConcurrencyStamp = "f186c8e1-c74e-4107-99fc-6b02237cdab0",
                             Type = "family_name",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "Flagg"
                         },
                         new
                         {
-                            Id = new Guid("961a83d0-1263-4b96-899b-059e168b03a5"),
-                            ConcurrencyStamp = "3d02e5f0-f839-458d-8142-95b412f3a02d",
+                            Id = new Guid("bc6cc616-52d2-4ae0-b92c-910d8048099b"),
+                            ConcurrencyStamp = "e6ab3322-ffb7-4e10-aac8-8763fb9252b6",
                             Type = "country",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "nl"
                         },
                         new
                         {
-                            Id = new Guid("4a337664-2555-40c6-aad6-53aab772d766"),
-                            ConcurrencyStamp = "dbc0f045-b83d-4751-9b86-cbefbfcd5ef2",
+                            Id = new Guid("42c9ecb1-b37a-400e-87f3-f3d7920642a5"),
+                            ConcurrencyStamp = "5d3b08a3-7593-4f42-a45e-449ecae3726e",
                             Type = "role",
                             UserId = new Guid("13229d33-99e0-41b3-b18d-4f72127e3971"),
                             Value = "FreeUser"
                         },
                         new
                         {
-                            Id = new Guid("508b5a3c-ad01-4376-ade9-2aae53990c0b"),
-                            ConcurrencyStamp = "2004188f-e146-4651-b4b3-4c3dadd80e7c",
+                            Id = new Guid("51dae495-6c9b-4809-9afa-d9fe566d2d82"),
+                            ConcurrencyStamp = "de6a44c2-bc39-44c6-80d4-8271c304b5ed",
                             Type = "given_name",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "Emma"
                         },
                         new
                         {
-                            Id = new Guid("a15ee06c-a2fe-4036-8a70-63eb4b7dc646"),
-                            ConcurrencyStamp = "a6cc888d-fb77-41f2-8cf3-41755b769bc4",
+                            Id = new Guid("25228f9a-4446-4e79-93b6-944dad05ebf0"),
+                            ConcurrencyStamp = "474d00e1-0adc-4d31-88c6-692a05ff9f79",
                             Type = "family_name",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "Flagg"
                         },
                         new
                         {
-                            Id = new Guid("63647ad2-2557-4b0b-9065-f95bfbcd07cb"),
-                            ConcurrencyStamp = "20a832cc-5aeb-492e-93e7-c327753804a1",
+                            Id = new Guid("505c87a0-4e6f-41c9-9550-3f8bbe85d7c4"),
+                            ConcurrencyStamp = "e1715a6e-f6e0-4026-81b3-eb0073f95ecb",
                             Type = "country",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "be"
                         },
                         new
                         {
-                            Id = new Guid("772648ab-ff21-4684-a959-f7cc55633c70"),
-                            ConcurrencyStamp = "8baf7fa2-cec0-4f09-afe6-684cab56c017",
+                            Id = new Guid("1d8fe6bd-f3b4-402b-9df5-032be9847ed7"),
+                            ConcurrencyStamp = "80b99d33-e77a-400b-b9bd-9190353add97",
                             Type = "role",
                             UserId = new Guid("96053525-f4a5-47ee-855e-0ea77fa6c55a"),
                             Value = "PayingUser"
@@ -191,24 +197,24 @@ namespace Marvin.IDP.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Provider")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("ProviderIdentityKey")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -221,22 +227,22 @@ namespace Marvin.IDP.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Secret")
                         .IsRequired()
-                        .HasColumnType("TEXT");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 

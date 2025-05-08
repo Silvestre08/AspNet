@@ -32,7 +32,7 @@ internal static class HostingExtensions
         builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         builder.Services.AddDbContext<IdentityDbContext>(options =>
         {
-            options.UseSqlite(
+            options.UseSqlServer(
                 builder.Configuration.GetConnectionString("MarvinIdentityDBConnectionString"));
         });
 
@@ -53,7 +53,16 @@ internal static class HostingExtensions
                     optionsBuilder.UseSqlServer(
                         builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
                         sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
-            }).AddConfigurationStoreCache();
+            })
+            .AddConfigurationStoreCache()
+            .AddOperationalStore(options =>
+            {
+                options.ConfigureDbContext = optionsBuilder =>
+                    optionsBuilder.UseSqlServer(
+                        builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
+                        sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
+                options.EnableTokenCleanup = true;
+            });
         //.AddTestUsers(TestUsers.Users);
 
         builder.Services

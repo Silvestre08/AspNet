@@ -1817,30 +1817,36 @@ We are going to required that on our login for local user accounts.
           return Page();
       }
 ```
+
 ## Asp.net core Identity
-Asp.net core identity is an out of the box solution provided by microsoft for user management. 
-It provides password management capabilites, as well as roles, claims,  profile data and SSO. It is an alternative to what we have done so far. SO far, we have implemented a few screens, etc.
+
+Asp.net core identity is an out of the box solution provided by microsoft for user management.
+It provides password management capabilites, as well as roles, claims, profile data and SSO. It is an alternative to what we have done so far. SO far, we have implemented a few screens, etc.
 Asp.net core identity provides those out of the box, if we do not need much flexibility on our Auth architecture.
 Since .net 8 identity endpoints are also provided. They are the same endpoints the Asp.net core identity UI uses behind the box (kind of), which allows the user to keep they user management screens on the front end technologies they are using.
 In this chapter we will include it with identity server. Our starting point is our application before we started adding users to our local database.
 When we add asp.net core identity we select:
+
 1. Add new scafolded item to our api.
 2. We choose all the options we want to override:
-![](doc/identityOtpions.PNG)
-The files we select will be added to our project so we can costumized it.
-Exploring the added code we can see:
+   ![](doc/identityOtpions.PNG)
+   The files we select will be added to our project so we can costumized it.
+   Exploring the added code we can see:
+
 ```
         builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
             .AddEntityFrameworkStores<MarvinIDPContext>()
             .AddDefaultTokenProviders(); // this adds identity services
 ```
+
 The aboce few lines avoids adding the UI pages. What we want to accomplish is to have idenity server as the main control of the flow but have integration points with asp.net core identity.
 It is through the user manager that we add users, add claims, etc.
-Our seed data file reveals some of the capabilities of the user manager. 
+Our seed data file reveals some of the capabilities of the user manager.
 In order for all of this to work, we need to import duende asp.net identity nugget package into our solution and tell identity server to use asp.net core identiy.
 
 ## Going to production
-Identity server is like any other web app. One way of hosting it in Azure is by using Azure App Service. We create an app service instance and copy our files to it (we can do from visual studio, ci cd pipelines - check devops repo, Cli, etc..) 
+
+Identity server is like any other web app. One way of hosting it in Azure is by using Azure App Service. We create an app service instance and copy our files to it (we can do from visual studio, ci cd pipelines - check devops repo, Cli, etc..)
 Before deploying it we need to configure operational data and configuration data.
 Configuration data includes resources like our APi and identity resources, CORS or identity providers..
 Configuration can be hard coded, in settings file or in database store, so they can be changed from a management screen.
@@ -1850,13 +1856,15 @@ This means we cannot use sql lite as data store as well because it is a file dep
 We also need a central safe location for protecting keys and grants at rest, session management etc.
 We also need to store signing credentials in a central location. Signing credentials need to be consistent between all instances of our app under a load balancer. We will store a certificate in azure key vault to accomodate that.
 Last thing to keep in mind is that proxy servers, load balancers, etc often obscure information about the request:
+
 1. original scheme when Http gets proxyied to https.
 2. original client ip address (our host will receive the request from the load balancer and not from the client)
-So we need to use forwarded headers.
+   So we need to use forwarded headers.
 
 When deployed to production we also need a license (even if it is free). So we are going through that process now.
 
 ## Storing configuration data in azure database
+
 1. The first thing we need is to create an SQL server database resource in azure:
 
 ![](doc/sqldatabse.PNG)
@@ -1864,12 +1872,12 @@ When deployed to production we also need a license (even if it is free). So we a
 Store the user name and password and Azure gives us the connection strings to connect to our database. We can also connect directly using SQL server management studio.
 
 2. We are going to seed the database in azure with the data we have on our config file. As such, all the tests users and other data in our config file is going to be seeded in the database. In a real production scenario we would need some sort of management screen to include all this data as well.
-In a sw development scenario we would have a database locally and the azure one is just for production.
-So we need to add the migrations for the configuration that are in another asssembly (from the nugget of duende) and comment out all the in memory configurations:
+   In a sw development scenario we would have a database locally and the azure one is just for production.
+   So we need to add the migrations for the configuration that are in another asssembly (from the nugget of duende) and comment out all the in memory configurations:
 
 ```
 var migrationAssembly = typeof(Program).GetTypeInfo().Assembly.GetName().Name;
-.AddConfigurationStore(options => 
+.AddConfigurationStore(options =>
 {
     options.ConfigureDbContext = optionsBuilder =>
         optionsBuilder.UseSqlServer(
@@ -1877,7 +1885,35 @@ var migrationAssembly = typeof(Program).GetTypeInfo().Assembly.GetName().Name;
             sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
 })
 ```
+
 3. Add migration. When adding the migration we need to be specific about the context, given the fact we have multiple contexts.
 4. Add SeedData class to seed the configuration data we have in the Config class. (in production it is better to have some sort of admin ui)
 5. Update database command to create it and lets go!
-COnfiguration data is accessed very often during authentication so it is a goog idea to add cache.
+   Configuration data is accessed very often during authentication so it is a goog idea to add cache. For now in memory cache may be ok, but on a production environment with scaling, distributed cache is better, so multiple services can access it.
+
+### Persisting operational data
+
+The next step is to persist operational data. We can use the same database we are using for our configuration. We can similarly call:
+
+```
+            .AddOperationalStore(options =>
+            {
+                options.ConfigureDbContext = optionsBuilder =>
+                    optionsBuilder.UseSqlServer(
+                        builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
+                        sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
+            });
+```
+
+then similarly run migration:
+
+```
+add-migration -name InitialIdentityServerMigration -context PersistedGrantDbContext
+```
+
+This will create the operational tables that sore tokens expiration, statuses etc.
+
+Now we can move as well all the user data to Azure. On real data we store hashed salted versions of the passwrod.
+For this we need to create another sql server database in azure and recreate the migrations (they created based on sql lite provider).
+
+### Data protection
