@@ -1917,3 +1917,21 @@ Now we can move as well all the user data to Azure. On real data we store hashed
 For this we need to create another sql server database in azure and recreate the migrations (they created based on sql lite provider).
 
 ### Data protection
+
+We are going to store data protection keys in Azure Blob storage. Under a storage account we can have one or more storage containers.
+This is the url we used for our storage container together with the data protection key part:
+https://celsopluralsight.blob.core.windows.net/pluralsight/dataprotectionkeys
+
+Now in keys vault we are going to store a key to protect the access to our blob storage protection keys
+
+It is important to take into account azure role assignments. Proper permissions to the application must be set in order to access key vault and blob storage.
+We also need to install the necessary nugget packages (check solution)
+and then add the protection key services:
+
+```
+        builder.Services.AddDataProtection()
+            .PersistKeysToAzureBlobStorage(new Uri(builder.Configuration["DataProtection:Keys"]), new DefaultAzureCredential())
+            .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["ProtectionKeyForkeys"]), new DefaultAzureCredential());// local laptop resuls in the user credentials (use az login in power shell) when deploy to app managed identity.
+```
+
+Key vault generates signing credentials to sign the tokens, unless we configure it otherwise. We can use a certificate store.

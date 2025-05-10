@@ -1,7 +1,9 @@
+using Azure.Identity;
 using Duende.IdentityServer;
 using Marvin.IDP.DbContexts;
 using Marvin.IDP.Entities;
 using Marvin.IDP.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -25,6 +27,9 @@ internal static class HostingExtensions
             iis.AuthenticationDisplayName = "Windows";
             iis.AutomaticAuthentication = false;
         });
+        builder.Services.AddDataProtection()
+            .PersistKeysToAzureBlobStorage(new Uri(builder.Configuration["DataProtection:Keys"]), new DefaultAzureCredential())
+            .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["DataProtection:ProtectionKeyForkeys"]), new DefaultAzureCredential());
 
         // uncomment if you want to add a UI
         builder.Services.AddRazorPages();
