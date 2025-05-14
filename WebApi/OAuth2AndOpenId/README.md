@@ -1935,3 +1935,25 @@ and then add the protection key services:
 ```
 
 Key vault generates signing credentials to sign the tokens, unless we configure it otherwise. We can use a certificate store.
+Certificates need a public/private key.
+Here is the certificate created in key vault for our configuration:
+
+![](doc/CertificateKeyVault.png)
+
+We need to then add that configuration on our app settings:
+
+```
+ "KeyVault": {
+   "RootUri": "https://keyvaultidp.vault.azure.net/",
+   "CertificateName": "PluralsightDemoSigningCertificate/432694472bed4ab3b7deab75c87afc0f"
+ }
+```
+
+Identity server needs the private key of the certificate to sign the tokens. Most of the time, the apps only need the public key. We use a secret client for that and that client allows getting secret with key vault.
+Each key vault certificate has three parts:
+
+1. certificate resource (public key metadata)
+2. key resource exposing the private key
+3. Secret: the certificate itself
+
+Here is how we configure fetching from key vault (need to install the necessary azure nugget package helpers):

@@ -1,4 +1,5 @@
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using Duende.IdentityServer;
 using Marvin.IDP.DbContexts;
 using Marvin.IDP.Entities;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Marvin.IDP;
 
@@ -27,9 +29,22 @@ internal static class HostingExtensions
             iis.AuthenticationDisplayName = "Windows";
             iis.AutomaticAuthentication = false;
         });
+        var credential = new DefaultAzureCredential();
         builder.Services.AddDataProtection()
-            .PersistKeysToAzureBlobStorage(new Uri(builder.Configuration["DataProtection:Keys"]), new DefaultAzureCredential())
-            .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["DataProtection:ProtectionKeyForkeys"]), new DefaultAzureCredential());
+            .PersistKeysToAzureBlobStorage(new Uri(builder.Configuration["DataProtection:Keys"]), credential)
+            .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["DataProtection:ProtectionKeyForkeys"]), credential);
+
+        var secretClient = new SecretClient(
+       new Uri(builder.Configuration["KeyVault:RootUri"]),
+       credential);
+
+        var secretResponse = secretClient.GetSecret(
+            builder.Configuration["KeyVault:CertificateName"]);
+
+        var signingCertificate = new X509Certificate2(
+          Convert.FromBase64String(secretResponse.Value.Value),
+          (string)null,
+          X509KeyStorageFlags.MachineKeySet);
 
         // uncomment if you want to add a UI
         builder.Services.AddRazorPages();
@@ -67,7 +82,7 @@ internal static class HostingExtensions
                         builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
                         sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
                 options.EnableTokenCleanup = true;
-            });
+            }).AddSigningCredential(signingCertificate);
         //.AddTestUsers(TestUsers.Users);
 
         builder.Services
