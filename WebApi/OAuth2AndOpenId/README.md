@@ -1957,3 +1957,42 @@ Each key vault certificate has three parts:
 3. Secret: the certificate itself
 
 Here is how we configure fetching from key vault (need to install the necessary azure nugget package helpers):
+
+```
+        var secretClient = new SecretClient(
+       new Uri(builder.Configuration["KeyVault:RootUri"]),
+       credential);
+
+        var secretResponse = secretClient.GetSecret(
+            builder.Configuration["KeyVault:CertificateName"]);
+
+        var signingCertificate = new X509Certificate2(
+          Convert.FromBase64String(secretResponse.Value.Value),
+          (string)null,
+          X509KeyStorageFlags.MachineKeySet);
+
+           .AddOperationalStore(options =>
+ {
+     options.ConfigureDbContext = optionsBuilder =>
+         optionsBuilder.UseSqlServer(
+             builder.Configuration.GetConnectionString("IdentityServerDBConnectionString"),
+             sqlOptions => sqlOptions.MigrationsAssembly(migrationAssembly));
+     options.EnableTokenCleanup = true;
+ }).AddSigningCredential(signingCertificate);
+```
+
+To see that this is all working we can check the keys endpoint that is given to us by the discovery document:
+
+![](doc/signingKeys.png)
+
+One of the next steps is to configure the forward headers. This is always needed for an application running behind a proxy server or load balancer.
+This is because proxies and load balancers remove some information from the request. Original scheme can be lost, like from https to http. The original id address is also lost (the request comes from the proxy).
+Headers that contain the original ip and the scheme:
+
+```
+        builder.Services.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
+        | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto);
+```
+
+Last step would be to apply for an identity server license and deploy to azure.
+When deploying to azure, do not forget to create managed idenity of our app and give it permissions to the key vault and storage container.

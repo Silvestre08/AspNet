@@ -109,12 +109,14 @@ internal static class HostingExtensions
         //    options.AppSecret = "11015f9e340b0990b0e50f39dd8a4e9a";
         //});
 
-
+        builder.Services.Configure<ForwardedHeadersOptions>(options => options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor 
+        | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto);
         return builder.Build();
     }
 
     public static WebApplication ConfigurePipeline(this WebApplication app)
     {
+        app.UseForwardedHeaders();
         app.UseSerilogRequestLogging();
 
         if (app.Environment.IsDevelopment())
